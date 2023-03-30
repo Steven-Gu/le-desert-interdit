@@ -87,7 +87,13 @@ class DModele extends Observable {
 class Case {
     /** On conserve un pointeur vers la classe principale du modèle. */
     private DModele modele;
+    protected boolean helice = false;
+    protected boolean boite_de_vitesses = false;
+    protected boolean cristal_d_energie = false;
+    protected boolean systeme_de_navigation = false;
     protected boolean EstTempete = false;
+    protected ArrayList<player> players = new ArrayList<player>();
+    protected tuile t;
     protected int sable = 0;
     private final int x, y;
     public Case(DModele modele, int x, int y) {
@@ -118,6 +124,203 @@ class Case {
     public int getSable(){return this.sable;}
 
 }
+
+abstract class tuile {
+    protected DModele modele;
+    protected Case c;
+    protected boolean est_releve = false;
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            return true;
+        }else return false;
+    }
+    abstract public String toString();
+}
+class oasis extends tuile{
+    protected boolean mirage = false;
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            if(!this.mirage){
+                for (player p:this.c.players){p.ajouteGourde(2);}
+            }
+            return true;
+        }else return false;
+    }
+     public String toString(){
+        if (this.mirage) {return "mirage";}
+        else return "oasis";
+    }
+}
+
+class piste extends tuile{
+    public String toString(){return "piste";}
+}
+
+class tunnel extends tuile{
+    private tunnel autre1,autre2;
+
+    public void setAutres(tunnel autre1, tunnel autre2) {
+        this.autre1 = autre1;
+        this.autre2 = autre2;
+    }
+    public String toString(){return "tunnel";}
+}
+
+class helice_ligne extends tuile{
+    protected helice_col col;
+    public void setCol(helice_col hc){this.col = hc;}
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            if (this.col.est_releve){this.modele.getCase(this.c.get_x(),this.col.c.get_y()).helice = true;}
+            return true;
+        }else return false;
+    }
+    public String toString(){return "ligne_helice";}
+}
+
+class helice_col extends tuile{
+    protected helice_ligne l;
+    public void setCol(helice_ligne l){this.l = l;}
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            if (this.l.est_releve){this.modele.getCase(this.l.c.get_x(),this.c.get_y()).helice = true;}
+            return true;
+        }else return false;
+    }
+    public String toString(){return "colonne_helice";}
+}
+
+class boite_de_vitesses_ligne extends tuile{
+        protected boite_de_vitesses_col col;
+        public void setCol(boite_de_vitesses_col hc){this.col = hc;}
+        public boolean releve(){
+            if (!this.est_releve) {
+                this.est_releve = true;
+                if (this.col.est_releve){this.modele.getCase(this.c.get_x(),this.col.c.get_y()).boite_de_vitesses = true;}
+                return true;
+            }else return false;
+        }
+        public String toString(){return "ligne_boite_de_vitesses";}
+    }
+
+class boite_de_vitesses_col extends tuile{
+    protected boite_de_vitesses_ligne l;
+    public void setCol(boite_de_vitesses_ligne l){this.l = l;}
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            if (this.l.est_releve){this.modele.getCase(this.l.c.get_x(),this.c.get_y()).boite_de_vitesses = true;}
+            return true;
+        }else return false;
+    }
+    public String toString(){return "colonne_boite_de_vitesses";}
+}
+
+class cristal_d_energie_ligne extends tuile{
+    protected cristal_d_energie_col col;
+    public void setCol(cristal_d_energie_col c){this.col = c;}
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            if (this.col.est_releve){this.modele.getCase(this.c.get_x(),this.col.c.get_y()).cristal_d_energie = true;}
+            return true;
+        }else return false;
+    }
+    public String toString(){return "ligne_cristal_d_energie";}
+}
+
+class cristal_d_energie_col extends tuile{
+    protected cristal_d_energie_ligne l;
+    public void setCol(cristal_d_energie_ligne l){this.l = l;}
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            if (this.l.est_releve){this.modele.getCase(this.l.c.get_x(),this.c.get_y()).cristal_d_energie = true;}
+            return true;
+        }else return false;
+    }
+    public String toString(){return "colonne_cristal_d_energie";}
+}
+
+class systeme_de_navigation_ligne extends tuile{
+    protected systeme_de_navigation_col col;
+    public void setCol(systeme_de_navigation_col c){this.col = c;}
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            if (this.col.est_releve){this.modele.getCase(this.c.get_x(),this.col.c.get_y()).systeme_de_navigation = true;}
+            return true;
+        }else return false;
+    }
+    public String toString(){return "ligne_systeme_de_navigation";}
+}
+
+class systeme_de_navigation_col extends tuile{
+    protected systeme_de_navigation_ligne l;
+    public void setCol(systeme_de_navigation_ligne l){this.l = l;}
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            if (this.l.est_releve){this.modele.getCase(this.l.c.get_x(),this.c.get_y()).systeme_de_navigation = true;}
+            return true;
+        }else return false;
+    }
+    public String toString(){return "colonne_systeme_de_navigation";}
+}
+
+
+
+
+class player{
+    private Case position;
+    private String name;
+    private Color couleur;
+    private int move;
+    private int water;
+
+    //return the cases player can move
+    public ArrayList<Case> casedispo(){
+        ArrayList<Case> list = new ArrayList<>();
+        for(Case c: this.position.get_4()){
+            if(!c.EstTempete && c.getSable()<2) list.add(c);
+        }
+        return list;
+    }
+
+    // add gourde
+    public void ajouteGourde(int gourde){
+        if(this.water + gourde<4) this.water +=gourde;
+        else this.water = 4;
+    }
+
+    //move to another case
+    public void deplace(Case c){
+        if(this.casedispo().contains(c)){
+            this.position = c;
+            this.move = this.move -1;
+        }
+    }
+
+    //remove sand on the given case
+    public void remove_sand(Case c){
+        if(this.casedispo().contains(c) || c==this.position){
+            if(c.retireSable()) this.move = this.move -1;
+        }
+    }
+
+
+}
+
+class archeologue extends player{}
+class alpiniste extends player{}
+class explorateur extends player{}
+class meteorologue extends player{}
+class navigateur extends player{}
+class porteuse extends player{}
 
 class DVue {
     /**
