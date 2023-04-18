@@ -102,6 +102,15 @@ class Case {
         this.y = y;
     }
 
+    public void setX(int x){this.x = x;}
+    public void setY(int y){this.y = y;}
+    public int get_x(){
+        return this.x;
+    }
+
+    public int get_y(){
+        return this.y;
+    }
     public boolean EstTempete(){return this.EstTempete;}
     public boolean ajouteSable(){
         if (modele.sableReste > 0){
@@ -112,16 +121,41 @@ class Case {
             return false;
         }
     }
-    public boolean retireSable(){
-        if(this.sable > 0){
-            this.sable--;
-            this.modele.sableReste++;
+
+    public boolean retireSable(int i){
+        if(this.sable >= i){
+            this.sable -= i;
+            this.modele.sableReste+=i;
             return true;
         }else{
             return false;
         }
     }
     public int getSable(){return this.sable;}
+
+    //return neighbors
+    public ArrayList<Case> get_4(){
+        ArrayList<Case> cases = new ArrayList<>();
+        if(this.x - 1 >=0) cases.add(this.modele.getCase(this.x-1,this.y));
+        if(this.x + 1 <=4) cases.add(this.modele.getCase(this.x+1,this.y));
+        if(this.y - 1 >=0) cases.add(this.modele.getCase(this.x,this.y-1));
+        if(this.y + 1 >=0) cases.add(this.modele.getCase(this.x,this.y+1));
+        return cases;
+    }
+
+    //return all neighbors including diagonal
+    public ArrayList<Case> get_All(){
+        ArrayList<Case> cases = new ArrayList<>();
+        if(this.x - 1 >=0) cases.add(this.modele.getCase(this.x-1,this.y));
+        if(this.x + 1 <=4) cases.add(this.modele.getCase(this.x+1,this.y));
+        if(this.y - 1 >=0) cases.add(this.modele.getCase(this.x,this.y-1));
+        if(this.y + 1 <=4) cases.add(this.modele.getCase(this.x,this.y+1));
+        if(this.x - 1 >=0 && this.y - 1 >=0) cases.add(this.modele.getCase(this.x-1,this.y-1));
+        if(this.x + 1 <=4 && this.y + 1 <=4) cases.add(this.modele.getCase(this.x+1,this.y+1));
+        if(this.y - 1 >=0 && this.x + 1 >=0) cases.add(this.modele.getCase(this.x+1,this.y-1));
+        if(this.y + 1 <=4 && this.x - 1 >=0) cases.add(this.modele.getCase(this.x-1,this.y+1));
+        return cases;
+    }
 
 }
 
@@ -273,22 +307,52 @@ class systeme_de_navigation_col extends tuile{
 }
 
 
+abstract class player{
+    protected Case position;
+    protected String name;
+    protected Color couleur;
+    protected int move;
+    protected int water;
 
 
-class player{
-    private Case position;
-    private String name;
-    private Color couleur;
-    private int move;
-    private int water;
-
+    public void setCase(Case c){
+        this.position = c;
+    }
     //return the cases player can move
-    public ArrayList<Case> casedispo(){
+
+    public ArrayList<Case> casedispo() {
         ArrayList<Case> list = new ArrayList<>();
-        for(Case c: this.position.get_4()){
-            if(!c.EstTempete && c.getSable()<2) list.add(c);
+        boolean have_alpiniste = false;
+        for (player p : this.position.players) {
+            if (p instanceof alpiniste) have_alpiniste = true;
+        }
+        if (this.position.getSable() >= 2 && !have_alpiniste) return list;
+        for (Case c : this.position.get_4()) {
+            if (!c.EstTempete && c.getSable() < 2) list.add(c);
         }
         return list;
+    }
+
+    public void releveP(){
+        if(this.position.getSable()==0){
+            if(this.position.releve()){
+                this.move -= 1;
+
+            }
+        }
+    }
+    public void shareWater(int n,player a){
+        if(a.position == this.position && this.water > n){
+            a.ajouteGourde(n);
+            this.water -= n;
+        }
+    }
+
+    public boolean drink(){
+        if(this.water > 1) {
+            this.water --;
+            return true;
+        }else return false;
     }
 
     // add gourde
@@ -300,7 +364,9 @@ class player{
     //move to another case
     public void deplace(Case c){
         if(this.casedispo().contains(c)){
+            this.position.players.remove(this);
             this.position = c;
+            this.position.players.add(this);
             this.move = this.move -1;
         }
     }
@@ -308,16 +374,58 @@ class player{
     //remove sand on the given case
     public void remove_sand(Case c){
         if(this.casedispo().contains(c) || c==this.position){
-            if(c.retireSable()) this.move = this.move -1;
+            if(c.retireSable(1)) this.move = this.move -1;
         }
     }
 
 
 }
 
-class archeologue extends player{}
-class alpiniste extends player{}
-class explorateur extends player{}
+class archeologue extends player{
+    @Override
+    public void remove_sand(Case c) {
+        if(this.casedispo().contains(c) || c==this.position){
+            if(c.retireSable(2)) this.move = this.move -1;
+            else if(c.retireSable(1)) this.move = this.move -1;
+        }
+    }
+}
+
+class alpiniste extends player{
+    @Override
+    public ArrayList<Case> casedispo() {
+        ArrayList<Case> list = new ArrayList<>();
+        for(Case c: this.position.get_4()){
+            if(!c.EstTempete) list.add(c);
+        }
+        return list;
+    }
+
+
+
+    public void deplaceAvec(Case c,player a) {
+        this.deplace(c);
+        a.position.players.remove(a);
+        a.setCase(c);
+        a.position.players.add(a);
+    }
+
+}
+class explorateur extends player{
+    @Override
+    public ArrayList<Case> casedispo() {
+        ArrayList<Case> list = new ArrayList<>();
+        boolean have_alpiniste = false;
+        for (player p : this.position.players) {
+            if (p instanceof alpiniste) have_alpiniste = true;
+        }
+        if (this.position.getSable() >= 2 && !have_alpiniste) return list;
+        for (Case c : this.position.get_All()) {
+            if (!c.EstTempete && c.getSable() < 2) list.add(c);
+        }
+        return list;
+    }
+}
 class meteorologue extends player{}
 class navigateur extends player{}
 class porteuse extends player{}
