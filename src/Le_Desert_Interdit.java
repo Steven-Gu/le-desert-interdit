@@ -52,8 +52,12 @@ class DModele extends Observable {
     /**
      * On stocke un tableau de cellules.
      */
-    private Case[][] cases;
-    protected static int sableReste = 48;
+    protected Case[][] cases;
+    protected Case CaseTempete;
+    protected ArrayList<player> players = new ArrayList<player>();
+    protected int sableReste = 48;
+
+    protected int niveauTempete;
     /**
      * Construction : on initialise un tableau de cases.
      */
@@ -65,13 +69,14 @@ class DModele extends Observable {
         cases = new Case[LARGEUR][HAUTEUR];
         for (int i = 0; i < LARGEUR; i++) {
             for (int j = 0; j < HAUTEUR; j++) {
-                cases[i][j] = new Case(this, i, j);
+                //cases[i][j] = new Case(this, i, j);
             }
         }
         init();
     }
     public void init(){
         cases[2][2].EstTempete = true;
+        CaseTempete = cases[2][2];
         cases[0][2].ajouteSable();
         cases[1][1].ajouteSable();
         cases[1][3].ajouteSable();
@@ -82,20 +87,24 @@ class DModele extends Observable {
         cases[4][2].ajouteSable();
     }
     public Case getCase (int x, int y){return cases[x][y];}
+
+
+
+    public void win(){}
+    public void lose(){}
 }
 
-class Case {
+abstract class Case {
     /** On conserve un pointeur vers la classe principale du modèle. */
-    private DModele modele;
+    protected DModele modele;
     protected boolean helice = false;
     protected boolean boite_de_vitesses = false;
     protected boolean cristal_d_energie = false;
     protected boolean systeme_de_navigation = false;
     protected boolean EstTempete = false;
     protected ArrayList<player> players = new ArrayList<player>();
-    protected tuile t;
     protected int sable = 0;
-    private final int x, y;
+    private int x, y;
     public Case(DModele modele, int x, int y) {
         this.modele = modele;
         this.x = x;
@@ -133,6 +142,15 @@ class Case {
     }
     public int getSable(){return this.sable;}
 
+    protected boolean est_releve = false;
+    public boolean releve(){
+        if (!this.est_releve) {
+            this.est_releve = true;
+            return true;
+        }else return false;
+    }
+    abstract public String toString();
+
     //return neighbors
     public ArrayList<Case> get_4(){
         ArrayList<Case> cases = new ArrayList<>();
@@ -159,25 +177,14 @@ class Case {
 
 }
 
-abstract class tuile {
-    protected DModele modele;
-    protected Case c;
-    protected boolean est_releve = false;
-    public boolean releve(){
-        if (!this.est_releve) {
-            this.est_releve = true;
-            return true;
-        }else return false;
-    }
-    abstract public String toString();
-}
-class oasis extends tuile{
+class oasis extends Case{
+    public oasis(DModele modele, int x, int y){super(modele,x, y);}
     protected boolean mirage = false;
     public boolean releve(){
         if (!this.est_releve) {
             this.est_releve = true;
             if(!this.mirage){
-                for (player p:this.c.players){p.ajouteGourde(2);}
+                for (player p:this.players){p.ajouteGourde(2);}
             }
             return true;
         }else return false;
@@ -188,12 +195,14 @@ class oasis extends tuile{
     }
 }
 
-class piste extends tuile{
+class piste extends Case{
+    public piste(DModele modele, int x, int y){super(modele,x, y);}
     public String toString(){return "piste";}
 }
 
-class tunnel extends tuile{
+class tunnel extends Case{
     private tunnel autre1,autre2;
+    public tunnel(DModele modele, int x, int y){super(modele,x, y);}
 
     public void setAutres(tunnel autre1, tunnel autre2) {
         this.autre1 = autre1;
@@ -202,104 +211,112 @@ class tunnel extends tuile{
     public String toString(){return "tunnel";}
 }
 
-class helice_ligne extends tuile{
+class helice_ligne extends Case{
+    public helice_ligne(DModele modele, int x, int y){super(modele,x, y);}
     protected helice_col col;
     public void setCol(helice_col hc){this.col = hc;}
     public boolean releve(){
         if (!this.est_releve) {
             this.est_releve = true;
-            if (this.col.est_releve){this.modele.getCase(this.c.get_x(),this.col.c.get_y()).helice = true;}
+            if (this.col.est_releve){this.modele.getCase(this.get_x(),this.col.get_y()).helice = true;}
             return true;
         }else return false;
     }
     public String toString(){return "ligne_helice";}
 }
 
-class helice_col extends tuile{
+class helice_col extends Case{
+    public helice_col(DModele modele, int x, int y){super(modele,x, y);}
     protected helice_ligne l;
     public void setCol(helice_ligne l){this.l = l;}
     public boolean releve(){
         if (!this.est_releve) {
             this.est_releve = true;
-            if (this.l.est_releve){this.modele.getCase(this.l.c.get_x(),this.c.get_y()).helice = true;}
+            if (this.l.est_releve){this.modele.getCase(this.l.get_x(),this.get_y()).helice = true;}
             return true;
         }else return false;
     }
     public String toString(){return "colonne_helice";}
 }
 
-class boite_de_vitesses_ligne extends tuile{
+class boite_de_vitesses_ligne extends Case{
+        public boite_de_vitesses_ligne(DModele modele, int x, int y){super(modele,x, y);}
         protected boite_de_vitesses_col col;
         public void setCol(boite_de_vitesses_col hc){this.col = hc;}
         public boolean releve(){
             if (!this.est_releve) {
                 this.est_releve = true;
-                if (this.col.est_releve){this.modele.getCase(this.c.get_x(),this.col.c.get_y()).boite_de_vitesses = true;}
+                if (this.col.est_releve){this.modele.getCase(this.get_x(),this.col.get_y()).boite_de_vitesses = true;}
                 return true;
             }else return false;
         }
         public String toString(){return "ligne_boite_de_vitesses";}
     }
 
-class boite_de_vitesses_col extends tuile{
+class boite_de_vitesses_col extends Case{
+    public boite_de_vitesses_col(DModele modele, int x, int y){super(modele,x, y);}
     protected boite_de_vitesses_ligne l;
     public void setCol(boite_de_vitesses_ligne l){this.l = l;}
     public boolean releve(){
         if (!this.est_releve) {
             this.est_releve = true;
-            if (this.l.est_releve){this.modele.getCase(this.l.c.get_x(),this.c.get_y()).boite_de_vitesses = true;}
+            if (this.l.est_releve){this.modele.getCase(this.l.get_x(),this.get_y()).boite_de_vitesses = true;}
             return true;
         }else return false;
     }
     public String toString(){return "colonne_boite_de_vitesses";}
 }
 
-class cristal_d_energie_ligne extends tuile{
+class cristal_d_energie_ligne extends Case{
+    public cristal_d_energie_ligne(DModele modele, int x, int y){super(modele,x, y);}
     protected cristal_d_energie_col col;
     public void setCol(cristal_d_energie_col c){this.col = c;}
     public boolean releve(){
         if (!this.est_releve) {
             this.est_releve = true;
-            if (this.col.est_releve){this.modele.getCase(this.c.get_x(),this.col.c.get_y()).cristal_d_energie = true;}
+            if (this.col.est_releve){this.modele.getCase(this.get_x(),this.col.get_y()).cristal_d_energie = true;}
             return true;
         }else return false;
     }
     public String toString(){return "ligne_cristal_d_energie";}
 }
 
-class cristal_d_energie_col extends tuile{
+class cristal_d_energie_col extends Case{
+    public cristal_d_energie_col(DModele modele, int x, int y){super(modele,x, y);}
     protected cristal_d_energie_ligne l;
     public void setCol(cristal_d_energie_ligne l){this.l = l;}
     public boolean releve(){
         if (!this.est_releve) {
             this.est_releve = true;
-            if (this.l.est_releve){this.modele.getCase(this.l.c.get_x(),this.c.get_y()).cristal_d_energie = true;}
+            if (this.l.est_releve){this.modele.getCase(this.l.get_x(),this.get_y()).cristal_d_energie = true;}
             return true;
         }else return false;
     }
     public String toString(){return "colonne_cristal_d_energie";}
 }
 
-class systeme_de_navigation_ligne extends tuile{
+class systeme_de_navigation_ligne extends Case{
+    public systeme_de_navigation_ligne(DModele modele, int x, int y){super(modele,x, y);}
     protected systeme_de_navigation_col col;
     public void setCol(systeme_de_navigation_col c){this.col = c;}
     public boolean releve(){
         if (!this.est_releve) {
             this.est_releve = true;
-            if (this.col.est_releve){this.modele.getCase(this.c.get_x(),this.col.c.get_y()).systeme_de_navigation = true;}
+            if (this.col.est_releve){this.modele.getCase(this.get_x(),this.col.get_y()).systeme_de_navigation = true;}
             return true;
         }else return false;
     }
     public String toString(){return "ligne_systeme_de_navigation";}
 }
 
-class systeme_de_navigation_col extends tuile{
+class systeme_de_navigation_col extends Case{
+    public systeme_de_navigation_col(DModele modele, int x, int y){super(modele,x, y);}
     protected systeme_de_navigation_ligne l;
     public void setCol(systeme_de_navigation_ligne l){this.l = l;}
     public boolean releve(){
         if (!this.est_releve) {
             this.est_releve = true;
-            if (this.l.est_releve){this.modele.getCase(this.l.c.get_x(),this.c.get_y()).systeme_de_navigation = true;}
+            if (this.l.est_releve){this.modele.getCase(this.l.get_x(),this.get_y()).systeme_de_navigation = true;}
             return true;
         }else return false;
     }
@@ -427,8 +444,135 @@ class explorateur extends player{
     }
 }
 class meteorologue extends player{}
-class navigateur extends player{}
-class porteuse extends player{}
+class navigateur extends player{
+    //tims he can navigate
+    protected int n = 3;
+    public void navigate(player a,Case c1){
+
+    }
+}
+class porteuse extends player{
+    @Override
+    public void ajouteGourde(int gourde) {
+        if(this.water + gourde<5) this.water +=gourde;
+        else this.water = 5;
+    }
+
+    public void getWater(){
+        if((this.position) instanceof oasis){
+            this.water ++;
+            this.move --;
+        }
+    }
+
+    @Override
+    public void shareWater(int n, player a) {
+        ArrayList<Case> list = new ArrayList<>();
+        list = this.position.get_4();
+        if(list.contains(a.position) && this.water > n){
+            a.ajouteGourde(n);
+            this.water -= n;
+        }
+    }
+}
+
+
+abstract class Carte_Tempete{
+    protected DModele modele;
+    public Carte_Tempete(DModele modele){this.modele=modele;}
+    abstract public void effet();
+}
+
+class vague_de_chaleur extends Carte_Tempete{
+
+    public vague_de_chaleur(DModele modele){super(modele);}
+
+    @Override
+    public void effet() {
+        for (player p:this.modele.players){
+            if (!p.drink()) this.modele.lose();
+        }
+    }
+}
+
+class tempete_se_dechaine extends Carte_Tempete{
+    public tempete_se_dechaine(DModele modele){super(modele);}
+    @Override
+    public void effet() {
+        if(++this.modele.niveauTempete>=7)
+            this.modele.lose();
+    }
+}
+
+class le_vent_souffle extends Carte_Tempete{
+    private int distance;
+    private String direction;
+    public le_vent_souffle(DModele modele,int distance,String direction){
+        super(modele);
+        this.distance=distance;
+        this.direction=direction;
+    }
+    @Override
+    public void effet() {
+        int tx = this.modele.CaseTempete.get_x();
+        int ty = this.modele.CaseTempete.get_y();
+        switch (direction){
+            case "left":
+                for(int i=0; i<distance;i++){
+                    if (tx > 0) {
+                        Case tmp = this.modele.CaseTempete;
+                        this.modele.cases[tx][ty] = this.modele.cases[tx - 1][ty];
+                        this.modele.cases[tx][ty].setX(tx);
+                        this.modele.cases[tx][ty].ajouteSable();
+                        tmp.setX(tx-1);
+                        this.modele.cases[tx - 1][ty] = tmp;
+                        tx--;
+                    }
+                }
+                break;
+            case "right":
+                for(int i=0; i<distance;i++){
+                    if (tx < 4) {
+                        Case tmp = this.modele.CaseTempete;
+                        this.modele.cases[tx][ty] = this.modele.cases[tx + 1][ty];
+                        this.modele.cases[tx][ty].setX(tx);
+                        this.modele.cases[tx][ty].ajouteSable();
+                        tmp.setX(tx+1);
+                        this.modele.cases[tx + 1][ty] = tmp;
+                        tx++;
+                    }
+                }
+                break;
+            case "front":
+                for(int i=0; i<distance;i++){
+                    if (ty > 0) {
+                        Case tmp = this.modele.CaseTempete;
+                        this.modele.cases[tx][ty] = this.modele.cases[tx][ty - 1];
+                        this.modele.cases[tx][ty].setY(ty);
+                        this.modele.cases[tx][ty].ajouteSable();
+                        tmp.setY(ty-1);
+                        this.modele.cases[tx][ty - 1] = tmp;
+                        ty--;
+                    }
+                }
+                break;
+            case "back":
+                for(int i=0; i<distance;i++){
+                    if (ty < 4) {
+                        Case tmp = this.modele.CaseTempete;
+                        this.modele.cases[tx][ty] = this.modele.cases[tx][ty + 1];
+                        this.modele.cases[tx][ty].setY(ty);
+                        this.modele.cases[tx][ty].ajouteSable();
+                        tmp.setY(ty+1);
+                        this.modele.cases[tx][ty + 1] = tmp;
+                        ty++;
+                    }
+                }
+                break;
+        }
+
+    }
+}
 
 class DVue {
     /**
