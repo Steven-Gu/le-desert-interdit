@@ -1,6 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
 
 public class Le_Desert_Interdit{
     public static void main(String[] args){
@@ -49,15 +51,29 @@ class DModele extends Observable {
      * On fixe la taille de la grille.
      */
     public static final int HAUTEUR = 5, LARGEUR = 5;
+    protected int nbJoueur;
+    protected int difficulte;
     /**
      * On stocke un tableau de cellules.
      */
     protected Case[][] cases;
+    protected ArrayList<Carte_Tempete> cartes = new ArrayList<>();
+    protected ArrayList<player> cartes_joueurs = new ArrayList<>();
+    protected ArrayList<Equipement> toolsCartes = new ArrayList<>();
     protected Case CaseTempete;
     protected ArrayList<player> players = new ArrayList<player>();
     protected int sableReste = 48;
 
     protected int niveauTempete;
+
+    protected boolean helice = false;
+    protected boolean boite_de_vitesses = false;
+    protected boolean cristal_d_energie = false;
+    protected boolean systeme_de_navigation = false;
+
+    protected boolean estGagne = false;
+    protected boolean estPerdu = false;
+
     /**
      * Construction : on initialise un tableau de cases.
      */
@@ -67,15 +83,82 @@ class DModele extends Observable {
          * colonne de chaque côté, dont les cellules n'évolueront pas.
          */
         cases = new Case[LARGEUR][HAUTEUR];
-        for (int i = 0; i < LARGEUR; i++) {
-            for (int j = 0; j < HAUTEUR; j++) {
-                //cases[i][j] = new Case(this, i, j);
+        Random random = new Random();
+        cases[2][2] = new tempete(this,2,2);
+        int numTunnel = 0;
+        int numOasis = 0;
+        int numpiste = 0;
+        int snc = 0;
+        int snl = 0;
+        int bvc = 0;
+        int bvl = 0;
+        int cec = 0;
+        int cel = 0;
+        int hc = 0;
+        int hl = 0;
+
+        boolean estmirage = true;
+        while (numTunnel < 3 || numOasis < 3 || numpiste < 1 || snc < 1 || snl < 1
+                || bvc < 1|| bvl < 1 || cec < 1 || cel < 1 || hc < 1 || hl < 1
+        ){
+            int i = random.nextInt(LARGEUR);
+            int j = random.nextInt(HAUTEUR);
+            if (cases[i][j] == null) {
+                if (numTunnel < 3) {
+                    cases[i][j] = new tunnel(this, i, j);
+                    numTunnel++;
+                } else if (numOasis < 3) {
+                    if (estmirage) {
+                        cases[i][j] = new mirage(this, i, j);
+                        estmirage=false;
+                    }
+                    else cases[i][j] = new oasis(this, i, j);
+                    numOasis++;
+                } else if (numpiste < 1){
+                    cases[i][j] = new piste(this, i, j);
+                    numpiste++;
+                } else if (snc < 1){
+                    cases[i][j] = new systeme_de_navigation_col(this, i, j);
+                    snc++;
+                }else if (snl < 1){
+                    cases[i][j] = new systeme_de_navigation_ligne(this, i, j);
+                    snl++;
+                }else if (bvc < 1){
+                    cases[i][j] = new boite_de_vitesses_col(this, i, j);
+                    bvc++;
+                }else if (bvl < 1){
+                    cases[i][j] = new boite_de_vitesses_ligne(this, i, j);
+                    bvl++;
+                }else if (cec < 1){
+                    cases[i][j] = new cristal_d_energie_col(this, i, j);
+                    cec++;
+                }else if (cel < 1){
+                    cases[i][j] = new cristal_d_energie_ligne(this, i, j);
+                    cel++;
+                }else if (hc < 1){
+                    cases[i][j] = new helice_col(this, i, j);
+                    hc++;
+                }else if (hl < 1){
+                    cases[i][j] = new helice_ligne(this, i, j);
+                    hl++;
+                }
             }
         }
-        init();
+
+
+        for (int i = 0; i < LARGEUR; i++) {
+            for (int j = 0; j < HAUTEUR; j++) {
+                if (cases[i][j]==null) {
+                    cases[i][j] = new city(this, i, j);
+                }
+            }
+        }
+        initSable();
+        initCartes();
+        initTools();
+        initToolsCartes();
     }
-    public void init(){
-        cases[2][2].EstTempete = true;
+    public void initSable(){
         CaseTempete = cases[2][2];
         cases[0][2].ajouteSable();
         cases[1][1].ajouteSable();
@@ -86,12 +169,81 @@ class DModele extends Observable {
         cases[3][3].ajouteSable();
         cases[4][2].ajouteSable();
     }
+    public void initCartes(){
+        for(int i = 0; i < 3; i++) cartes.add(new tempete_se_dechaine(this));
+        for(int i = 0; i < 4; i++) cartes.add(new vague_de_chaleur(this));
+        for(int direction = 0; direction < 4; direction++){
+            cartes.add(new le_vent_souffle(this,3,direction));
+            for(int c = 0; c < 2; c++) cartes.add(new le_vent_souffle(this,2,direction));
+            for(int j = 0; j < 3; j++) cartes.add(new le_vent_souffle(this,1,direction));
+        }
+
+        Collections.shuffle(cartes);
+    }
     public Case getCase (int x, int y){return cases[x][y];}
 
+    public void initTools(){
+        ArrayList<Integer> positions = new ArrayList<>();
+        Random random = new Random();
+        while (positions.size() < 12) {
+            int position = random.nextInt(25);
+            if (!positions.contains(position)&& position!=12) {
+                positions.add(position);
+            }
+        }
 
+        for (int position : positions) {
+            int row = position / 5;
+            int col = position % 5;
+            cases[row][col].hasEquipement = true;
+        }
+    }
+    public void initToolsCartes(){
+        for(int i = 0; i < 3; i++) toolsCartes.add(new Equipement(1));
+        for(int i = 0; i < 3; i++) toolsCartes.add(new Equipement(2));
+        for(int i = 0; i < 2; i++) toolsCartes.add(new Equipement(3));
+        for(int i = 0; i < 2; i++) toolsCartes.add(new Equipement(4));
+        toolsCartes.add(new Equipement(5));
+        toolsCartes.add(new Equipement(6));
+        Collections.shuffle(toolsCartes);
+    }
 
-    public void win(){}
-    public void lose(){}
+    public Carte_Tempete tireCarteTempete(){
+        if (cartes.size() == 0) initCartes();
+        Carte_Tempete c = this.cartes.get(0);
+        this.cartes.remove(c);
+        return c;
+    }
+
+    public void initCarteJoueur(){
+        cartes_joueurs.add(new alpiniste());
+        cartes_joueurs.add(new explorateur());
+        cartes_joueurs.add(new porteuse());
+        cartes_joueurs.add(new meteorologue());
+        cartes_joueurs.add(new navigateur());
+        cartes_joueurs.add(new archeologue());
+        Collections.shuffle(cartes_joueurs);
+    }
+
+    public player tirerCarteJoueur(){
+        player p = this.cartes_joueurs.get(0);
+        this.cartes_joueurs.remove(p);
+        players.add(p);
+        return p;
+    }
+
+    public void win(){
+        boolean b = true;
+        if(helice && cristal_d_energie && systeme_de_navigation && boite_de_vitesses){
+            for(player p : players){
+                if(!(p.position.est_releve && p.position instanceof piste)) b = false;
+            }
+        }else b = false;
+        estGagne = b;
+    }
+    public void lose(){
+        estPerdu = true;
+    }
 }
 
 abstract class Case {
@@ -101,9 +253,10 @@ abstract class Case {
     protected boolean boite_de_vitesses = false;
     protected boolean cristal_d_energie = false;
     protected boolean systeme_de_navigation = false;
-    protected boolean EstTempete = false;
     protected ArrayList<player> players = new ArrayList<player>();
     protected int sable = 0;
+    protected boolean estBouclier = false;
+    protected boolean hasEquipement = false;
     private int x, y;
     public Case(DModele modele, int x, int y) {
         this.modele = modele;
@@ -120,14 +273,12 @@ abstract class Case {
     public int get_y(){
         return this.y;
     }
-    public boolean EstTempete(){return this.EstTempete;}
-    public boolean ajouteSable(){
+    public void ajouteSable(){
         if (modele.sableReste > 0){
             this.modele.sableReste--;
             this.sable++;
-            return true;
         }else{
-            return false;
+            this.modele.lose();
         }
     }
 
@@ -177,6 +328,19 @@ abstract class Case {
 
 }
 
+class city extends Case{
+    public city(DModele modele, int x, int y){
+        super(modele,x, y);
+    }
+    public String toString(){return "cite";}
+}
+class tempete extends Case{
+    public tempete(DModele modele, int x, int y){
+        super(modele,x, y);
+    }
+    public String toString(){return "Tempete";}
+}
+
 class oasis extends Case{
     public oasis(DModele modele, int x, int y){super(modele,x, y);}
     protected boolean mirage = false;
@@ -192,6 +356,18 @@ class oasis extends Case{
      public String toString(){
         if (this.mirage) {return "mirage";}
         else return "oasis";
+    }
+}
+
+class mirage extends oasis{
+    public mirage(DModele modele, int x, int y){
+        super(modele,x, y);
+        this.mirage = true;
+    }
+    public String toString() {
+        if(this.est_releve)
+            return "mirage";
+        else{return "oasis";}
     }
 }
 
@@ -345,7 +521,7 @@ abstract class player{
         }
         if (this.position.getSable() >= 2 && !have_alpiniste) return list;
         for (Case c : this.position.get_4()) {
-            if (!c.EstTempete && c.getSable() < 2) list.add(c);
+            if (!(c instanceof tempete) && c.getSable() < 2) list.add(c);
         }
         return list;
     }
@@ -357,14 +533,15 @@ abstract class player{
             }
         }
     }
-    public void shareWater(int n,player a){
-        if(a.position == this.position && this.water > n){
-            a.ajouteGourde(n);
-            this.water -= n;
+    public void shareWater(player a){
+        if(a.position == this.position && this.water > 1){
+            a.ajouteGourde(1);
+            this.water -= 1;
         }
     }
 
     public boolean drink(){
+        if(this.position instanceof tunnel || this.position.estBouclier) return true;
         if(this.water > 1) {
             this.water --;
             return true;
@@ -444,7 +621,7 @@ class alpiniste extends player{
     public ArrayList<Case> casedispo() {
         ArrayList<Case> list = new ArrayList<>();
         for(Case c: this.position.get_4()){
-            if(!c.EstTempete) list.add(c);
+            if(!(c instanceof tempete)) list.add(c);
         }
         return list;
     }
@@ -452,9 +629,11 @@ class alpiniste extends player{
 
     public void deplaceAvec(Case c,player a) {
         this.deplace(c);
-        a.position.players.remove(a);
-        a.setCase(c);
-        a.position.players.add(a);
+        if(this.position.players.contains(a)) {
+            a.position.players.remove(a);
+            a.setCase(c);
+            a.position.players.add(a);
+        }
     }
 
 }
@@ -468,7 +647,7 @@ class explorateur extends player{
         }
         if (this.position.getSable() >= 2 && !have_alpiniste) return list;
         for (Case c : this.position.get_All()) {
-            if (!c.EstTempete && c.getSable() < 2) list.add(c);
+            if (!(c instanceof tempete) && c.getSable() < 2) list.add(c);
         }
         return list;
     }
@@ -481,9 +660,24 @@ class meteorologue extends player{
 class navigateur extends player{
     //tims he can navigate
     protected int n = 3;
-    public void navigate(player a,Case c1){
-
+    private void deplaceNormal(player a,Case c1){
+        a.deplace(c1);
     }
+    private void deplaceAlpiniste(alpiniste a,Case c1, player b){
+        a.deplaceAvec(c1,b);
+    }
+    public void navigate(alpiniste a,Case c1,Case c2, Case c3, player p1, player p2,player p3){
+        deplaceAlpiniste(a,c1,p1);
+        deplaceAlpiniste(a,c2,p2);
+        deplaceAlpiniste(a,c3,p3);
+    }
+    public void navigate(player a,Case c1,Case c2, Case c3){
+        deplaceNormal(a,c1);
+        deplaceNormal(a,c2);
+        deplaceNormal(a,c3);
+    }
+
+
 }
 class porteuse extends player{
     @Override
@@ -500,12 +694,12 @@ class porteuse extends player{
     }
 
     @Override
-    public void shareWater(int n, player a) {
+    public void shareWater( player a) {
         ArrayList<Case> list = new ArrayList<>();
         list = this.position.get_4();
-        if(list.contains(a.position) && this.water > n){
-            a.ajouteGourde(n);
-            this.water -= n;
+        if(list.contains(a.position) && this.water > 1){
+            a.ajouteGourde(1);
+            this.water -= 1;
         }
     }
 }
@@ -540,8 +734,8 @@ class tempete_se_dechaine extends Carte_Tempete{
 
 class le_vent_souffle extends Carte_Tempete{
     private int distance;
-    private String direction;
-    public le_vent_souffle(DModele modele,int distance,String direction){
+    private int direction;
+    public le_vent_souffle(DModele modele,int distance,int direction){
         super(modele);
         this.distance=distance;
         this.direction=direction;
@@ -551,7 +745,7 @@ class le_vent_souffle extends Carte_Tempete{
         int tx = this.modele.CaseTempete.get_x();
         int ty = this.modele.CaseTempete.get_y();
         switch (direction){
-            case "left":
+            case 0://left
                 for(int i=0; i<distance;i++){
                     if (tx > 0) {
                         Case tmp = this.modele.CaseTempete;
@@ -564,7 +758,7 @@ class le_vent_souffle extends Carte_Tempete{
                     }
                 }
                 break;
-            case "right":
+            case 1://right
                 for(int i=0; i<distance;i++){
                     if (tx < 4) {
                         Case tmp = this.modele.CaseTempete;
@@ -577,7 +771,7 @@ class le_vent_souffle extends Carte_Tempete{
                     }
                 }
                 break;
-            case "front":
+            case 2://front
                 for(int i=0; i<distance;i++){
                     if (ty > 0) {
                         Case tmp = this.modele.CaseTempete;
@@ -590,7 +784,7 @@ class le_vent_souffle extends Carte_Tempete{
                     }
                 }
                 break;
-            case "back":
+            case 3://back
                 for(int i=0; i<distance;i++){
                     if (ty < 4) {
                         Case tmp = this.modele.CaseTempete;
@@ -607,6 +801,31 @@ class le_vent_souffle extends Carte_Tempete{
 
     }
 }
+
+class Equipement{
+    protected String nom;
+    protected int n_tool;
+    protected boolean used = false;
+
+    public Equipement(int n){
+        n_tool = n;
+        switch(n){
+            case 1:
+                nom = "blaster";
+            case 2:
+                nom = "jetback";
+            case 3:
+                nom = "bouclier";
+            case 4:
+                nom = "terrascope";
+            case 5:
+                nom = "boost";
+            case 6:
+                nom = "reserveEau";
+        }
+    }
+}
+
 
 class DVue {
     /**
@@ -708,7 +927,7 @@ class VueGrille extends JPanel implements Observer {
         super.repaint();
         /** Pour chaque cellule... */
         Font currentFont = g.getFont();
-        Font newFont = currentFont.deriveFont(currentFont.getSize() * 3F);
+        Font newFont = currentFont.deriveFont(currentFont.getSize() * 1F);
         g.setFont(newFont);
         for(int i=0; i<DModele.LARGEUR; i++) {
             for(int j=0; j<DModele.HAUTEUR; j++) {
@@ -730,7 +949,7 @@ class VueGrille extends JPanel implements Observer {
      */
     private void paint(Graphics g, Case c, int x, int y) {
         /** Sélection d'une couleur. */
-        if (c.EstTempete()) {
+        if (c instanceof tempete) {
             g.setColor(Color.GRAY);
         } else {
             g.setColor(Color.ORANGE);
@@ -738,8 +957,9 @@ class VueGrille extends JPanel implements Observer {
         /** Coloration d'un rectangle. */
         g.fillRect(x, y, TAILLE-30, TAILLE-30);
         g.setColor(Color.BLACK);
+        if (c.est_releve || (c instanceof oasis)) g.drawString(c.toString(),x+5,y+20);
         if(c.getSable() != 0){
-            g.drawString(Integer.toString(c.getSable()),x,y+30);
+            g.drawString("sable: " + Integer.toString(c.getSable()),x+5,y+35);
         }
     }
 }
