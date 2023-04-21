@@ -330,7 +330,7 @@ abstract class player{
     protected Color couleur;
     protected int move;
     protected int water;
-
+    protected ArrayList<Equipement> tools;
 
     public void setCase(Case c){
         this.position = c;
@@ -354,7 +354,6 @@ abstract class player{
         if(this.position.getSable()==0){
             if(this.position.releve()){
                 this.move -= 1;
-
             }
         }
     }
@@ -395,6 +394,38 @@ abstract class player{
         }
     }
 
+    public void use_tool(Equipement tool, Case c){
+        if(this.tools.contains(tool)){
+            switch(tool.n_tool){
+                case 1:
+                    if(this.position.get_4().contains(c)){
+                        while (c.retireSable(1)) {}
+                        tool.used = true;
+                    }
+                case 2:
+                    if(c.sable<=1 && ! (c instanceof tempete)){
+                        this.position = c;
+                        tool.used = true;
+                    }
+                case 3:
+                    this.position.estBouclier = true;
+                    tool.used = true;
+                case 4:
+
+                case 5:
+                    this.move +=2;
+                    tool.used = true;
+                case 6:
+                    ArrayList<player> list = new ArrayList<>();
+                    list = this.position.players;
+                    for(player n: list){
+                        n.ajouteGourde(2);
+                    }
+                    tool.used = true;
+            }
+
+        }
+    }
 
 }
 
@@ -417,7 +448,6 @@ class alpiniste extends player{
         }
         return list;
     }
-
 
 
     public void deplaceAvec(Case c,player a) {
@@ -443,7 +473,11 @@ class explorateur extends player{
         return list;
     }
 }
-class meteorologue extends player{}
+class meteorologue extends player{
+    public void voirCarte(){
+
+    }
+}
 class navigateur extends player{
     //tims he can navigate
     protected int n = 3;
