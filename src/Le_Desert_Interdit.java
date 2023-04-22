@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicButtonListener;
+import javax.swing.plaf.basic.BasicOptionPaneUI;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -308,7 +310,7 @@ abstract class Case {
         if(this.x - 1 >=0) cases.add(this.modele.getCase(this.x-1,this.y));
         if(this.x + 1 <=4) cases.add(this.modele.getCase(this.x+1,this.y));
         if(this.y - 1 >=0) cases.add(this.modele.getCase(this.x,this.y-1));
-        if(this.y + 1 >=0) cases.add(this.modele.getCase(this.x,this.y+1));
+        if(this.y + 1 <=4) cases.add(this.modele.getCase(this.x,this.y+1));
         return cases;
     }
 
@@ -504,15 +506,19 @@ abstract class player{
     protected Case position;
     protected String name;
     protected Color couleur;
-    protected int move;
-    protected int water;
+    protected int move = 4;
+    protected int water = 4;
+    protected int maxWater=4;
     protected ArrayList<Equipement> tools;
 
     public void setCase(Case c){
         this.position = c;
     }
-    //return the cases player can move
 
+    public void newturn(){
+        this.move =4;
+        this.modele.notifyObservers();
+    }
     public ArrayList<Case> casedispo() {
         ArrayList<Case> list = new ArrayList<>();
         boolean have_alpiniste = false;
@@ -525,6 +531,7 @@ abstract class player{
         }
         return list;
     }
+
 
     public void releveP(){
         if(this.position.getSable()==0){
@@ -812,16 +819,22 @@ class Equipement{
         switch(n){
             case 1:
                 nom = "blaster";
+                break;
             case 2:
                 nom = "jetback";
+                break;
             case 3:
                 nom = "bouclier";
+                break;
             case 4:
                 nom = "terrascope";
+                break;
             case 5:
                 nom = "boost";
+                break;
             case 6:
                 nom = "reserveEau";
+                break;
         }
     }
 }
@@ -929,6 +942,7 @@ class VueGrille extends JPanel implements Observer {
         Font currentFont = g.getFont();
         Font newFont = currentFont.deriveFont(currentFont.getSize() * 1F);
         g.setFont(newFont);
+
         for(int i=0; i<DModele.LARGEUR; i++) {
             for(int j=0; j<DModele.HAUTEUR; j++) {
                 /**
@@ -938,6 +952,11 @@ class VueGrille extends JPanel implements Observer {
                  */
                 paint(g, modele.getCase(i, j), i*TAILLE, j*TAILLE);
             }
+        }
+        for(int i = 0; i < this.modele.players.size();i++){
+            player p = this.modele.players.get(i);
+            g.setColor(p.couleur);
+            g.fillRect(p.position.get_y()*TAILLE + 20*i,p.position.get_x()*TAILLE+45,20,30);
         }
     }
     /**
@@ -961,5 +980,34 @@ class VueGrille extends JPanel implements Observer {
         if(c.getSable() != 0){
             g.drawString("sable: " + Integer.toString(c.getSable()),x+5,y+35);
         }
+    }
+
+    public void actionPerformed(ActionEvent e){
+
+    }
+    public void mousePressed(MouseEvent e){
+        int y = e.getX()/TAILLE;
+        int x = e.getY()/TAILLE;
+
+        if (SwingUtilities.isLeftMouseButton(e)) {
+            this.controleur.deplace(x,y);
+        } else if (SwingUtilities.isRightMouseButton(e)) {
+            this.controleur.removeSand(x,y);
+        }
+    }
+    @Override
+    public void mouseClicked(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
     }
 }
