@@ -20,7 +20,7 @@ public class Le_Desert_Interdit{
 }
 
 interface Observer{
-    public void update();
+    void update();
 }
 
 abstract class Observable {
@@ -579,7 +579,6 @@ abstract class player{
     protected Case position;
     protected String name;
     protected Color couleur;
-    public String description;
     protected int move = 4;
     protected int water = 4;
     protected int maxWater=4;
@@ -770,13 +769,14 @@ class archeologue extends player{
 }
 
 class alpiniste extends player{
-    public String description = "L’alpiniste peut aller sur les tuiles bloquées\n" +
-            "(les tuiles ayant au moins 2 marqueurs Sable).\n" +
-            "Elle peut aussi emmener un autre joueur avec elle\n" +
-            "à chaque fois qu’elle se déplace. Tous les pions\n" +
-            "sur la tuile de l’alpiniste ne sont jamais enlisés\n" +
-            "et peuvent quitter la tuile de l’alpiniste même\n" +
-            "s’il y a 2 marqueurs Sable ou plus.";
+    public String description = """
+            L’alpiniste peut aller sur les tuiles bloquées
+            (les tuiles ayant au moins 2 marqueurs Sable).
+            Elle peut aussi emmener un autre joueur avec elle
+            à chaque fois qu’elle se déplace. Tous les pions
+            sur la tuile de l’alpiniste ne sont jamais enlisés
+            et peuvent quitter la tuile de l’alpiniste même
+            s’il y a 2 marqueurs Sable ou plus.""";
     public String getDescription(){return this.description;}
     public alpiniste(DModele modele, String name, Color c) {
         super(modele, name, c);
@@ -829,37 +829,40 @@ class explorateur extends player{
     }
 }
 class meteorologue extends player{
-    public String description = "La météorologue peut dépenser des actions pour\n" +
-            "tirer, à la fin de son tour, moins de cartes Tempête\n" +
-            "(1 carte par action) que ne le nécessite le niveau actuel\n" +
-            "de la Tempête de sable. Elle peut aussi dépenser\n" +
-            "1 action pour regarder autant de cartes Tempête que\n" +
-            "son niveau actuel, puis en placer éventuellement\n" +
-            "une sous la pile. Les autres cartes sont remises\n" +
-            "sur le dessus de la pile dans l’ordre de son choix.";
+    public String description = """
+            La météorologue peut dépenser des actions pour
+            tirer, à la fin de son tour, moins de cartes Tempête
+            (1 carte par action) que ne le nécessite le niveau actuel
+            de la Tempête de sable. Elle peut aussi dépenser
+            1 action pour regarder autant de cartes Tempête que
+            son niveau actuel, puis en placer éventuellement
+            une sous la pile. Les autres cartes sont remises
+            sur le dessus de la pile dans l’ordre de son choix.""";
     public String getDescription(){return this.description;}
     public meteorologue(DModele modele, String name, Color c) {
         super(modele, name, c);
     }
 }
 class navigateur extends player{
-    public String description = "La navigatrice peut déplacer un autre joueur jusqu’à\n" +
-            "3 tuiles non bloquées par action, Tunnels inclus.\n" +
-            "Elle peut déplacer l’explorateur diagonalement\n" +
-            "et peut déplacer l’alpiniste sur les tuiles bloquées.\n" +
-            "Déplacée ainsi, l’alpiniste peut aussi utiliser son\n" +
-            "pouvoir et emmener un autre joueur (dont la navigatrice) !";
+    public String description = """
+            La navigatrice peut déplacer un autre joueur jusqu’à
+            3 tuiles non bloquées par action, Tunnels inclus.
+            Elle peut déplacer l’explorateur diagonalement
+            et peut déplacer l’alpiniste sur les tuiles bloquées.
+            Déplacée ainsi, l’alpiniste peut aussi utiliser son
+            pouvoir et emmener un autre joueur (dont la navigatrice) !""";
     public String getDescription(){return this.description;}
     public navigateur(DModele modele, String name, Color c) {
         super(modele, name, c);
     }
 }
 class porteuse extends player{
-    public String description = "La porteuse d’eau peut prendre 2 portions d’eau\n" +
-            "des tuiles « Point d’eau » déjà révélées pour 1 action.\n" +
-            "Elle peut aussi donner de l’eau aux joueurs sur les\n" +
-            "tuiles adjacentes gratuitement et à tout moment.\n" +
-            "Sa gourde commence avec 5 portions d’eau (au lieu de 4).";
+    public String description = """
+            La porteuse d’eau peut prendre 2 portions d’eau
+            des tuiles « Point d’eau » déjà révélées pour 1 action.
+            Elle peut aussi donner de l’eau aux joueurs sur les
+            tuiles adjacentes gratuitement et à tout moment.
+            Sa gourde commence avec 5 portions d’eau (au lieu de 4).""";
     public String getDescription(){return this.description;}
 
     public porteuse(DModele modele, String name, Color c) {
@@ -1130,7 +1133,9 @@ class DVue extends JFrame implements Observer, ActionListener {
         VueTempete tempete = new VueTempete(modele,controleur);
         VueStatus status = new VueStatus(modele,controleur);
         VueButtons buttons = new VueButtons(modele,controleur);
+        VuePieces pieces = new VuePieces(modele,controleur);
 
+        frame.add(pieces);
         frame.add(joueur);
         frame.add(grille);
         frame.add(tempete);
@@ -1172,10 +1177,10 @@ class VueStatus extends JPanel implements Observer,ActionListener{
 
         textT = new JTextField("Niveau tempete: " + this.modele.niveauTempete);
         textS = new JTextField("Total Sable: " + this.modele.sableReste);
-        piece1 = new JTextArea("Helice: " + Boolean.toString(this.modele.helice)
-                +"\nboite de vitesse: "+Boolean.toString(this.modele.boite_de_vitesses));
-        piece2 = new JTextArea("Systeme de navigation: " + Boolean.toString(this.modele.systeme_de_navigation)
-                +"\ncristal d'énergie: "+Boolean.toString(this.modele.cristal_d_energie));
+        piece1 = new JTextArea("Helice: " + this.modele.helice
+                +"\nboite de vitesse: "+ this.modele.boite_de_vitesses);
+        piece2 = new JTextArea("Systeme de navigation: " + this.modele.systeme_de_navigation
+                +"\ncristal d'énergie: "+ this.modele.cristal_d_energie);
 
         add(textT);
         add(textS);
@@ -1187,42 +1192,15 @@ class VueStatus extends JPanel implements Observer,ActionListener{
     public void update() {
         textT.setText("Niveau tempete: " + this.modele.niveauTempete);
         textS.setText("Total Sable: " + this.modele.sableReste);
-        piece1.setText("Helice: " + Boolean.toString(this.modele.helice)
-                +"\nboite de vitesse: "+Boolean.toString(this.modele.boite_de_vitesses));
-        piece2.setText("Systeme de navigation: " + Boolean.toString(this.modele.systeme_de_navigation)
-                +"\ncristal d'énergie: "+Boolean.toString(this.modele.cristal_d_energie));
+        piece1.setText("Helice: " + this.modele.helice
+                +"\nboite de vitesse: "+ this.modele.boite_de_vitesses);
+        piece2.setText("Systeme de navigation: " + this.modele.systeme_de_navigation
+                +"\ncristal d'énergie: "+ this.modele.cristal_d_energie);
         repaint();
     }
 
     public void actionPerformed(ActionEvent e){
         controleur.performAction(e.getActionCommand());
-    }
-}
-
-
-class VueIndicate extends JPanel implements Observer{
-    private DModele modele;
-    private DControleur controleur;
-    private JTextArea text = new JTextArea();
-
-
-    public VueIndicate(DModele modele,DControleur controleur){
-        this.modele = modele;
-        this.controleur = controleur;
-        this.modele.addObserver(this);
-
-        setBounds(1000,255,240,200);
-        setBorder(BorderFactory.createLineBorder(Color.GRAY,3));
-
-        text.setLineWrap(true);
-
-
-        add(text);
-    }
-
-    @Override
-    public void update() {
-        repaint();
     }
 }
 
@@ -1315,6 +1293,51 @@ class VueJoueur extends JPanel implements Observer,ActionListener{
         }
 
         repaint();
+    }
+}
+
+class VuePieces extends JPanel {
+    private DModele modele;
+    private DControleur controleur;
+    private int shapeSize = 20;
+
+    public VuePieces(DModele modele, DControleur controleur){
+        this.modele = modele;
+        this.controleur = controleur;
+
+        setBounds(1000,250,240,400);
+    }
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        // Draw the shapes and their labels
+        g.setColor(Color.BLUE);
+        g.fillOval(10, 10, shapeSize, shapeSize);
+        g.setColor(Color.BLACK);
+        g.drawString("Systeme de navigation", 40, 25);
+
+        g.setColor(Color.GREEN);
+        g.fillRect(10, 40, shapeSize, shapeSize);
+        g.setColor(Color.BLACK);
+        g.drawString("Cristal d'energie", 40, 55);
+
+        g.setColor(Color.RED);
+        int[] xPoints = {10, 10 + (shapeSize / 2), 10 + shapeSize};
+        int[] yPoints = {70, 90, 70};
+        g.fillPolygon(xPoints, yPoints, 3);
+        g.setColor(Color.BLACK);
+        g.drawString("Helice", 40, 75);
+
+        g.setColor(Color.YELLOW);
+        int[] xPointsStar = {10, 30, 20};
+        int[] yPointsStar = {100, 100, 120};
+        g.fillPolygon(xPointsStar, yPointsStar, 3);
+        int[] xPointsStar2 = {10, 30, 20};
+        int[] yPointsStar2 = {120, 120, 100};
+        g.fillPolygon(xPointsStar2, yPointsStar2, 3);
+        g.setColor(Color.BLACK);
+        g.drawString("Boite de vitesses", 40, 115);
     }
 }
 class VueTempete extends JPanel implements Observer,ActionListener{
@@ -1507,12 +1530,44 @@ class VueGrille extends JPanel implements Observer,ActionListener, MouseListener
         }
 
         g.fillRect(x, y, TAILLE-30, TAILLE-30);
+
+        int shapeSize = 10;
+
+        if (c.systeme_de_navigation) {
+            // Draw a circle
+            g.setColor(Color.BLUE);
+            g.fillOval(x + 5, y + 5, shapeSize, shapeSize);
+        }
+        if (c.cristal_d_energie) {
+            // Draw a square
+            g.setColor(Color.GREEN);
+            g.fillRect(x + TAILLE - 30 - 5 - shapeSize, y + 5, shapeSize, shapeSize);
+        }
+        if (c.helice) {
+            // Draw a triangle
+            g.setColor(Color.RED);
+            int[] xPoints = {x + 5, x + 5 + (shapeSize / 2), x + 5 + shapeSize};
+            int[] yPoints = {y + TAILLE - 30 - 5 - shapeSize, y + TAILLE - 30 - 5, y + TAILLE - 30 - 5 - shapeSize};
+            g.fillPolygon(xPoints, yPoints, 3);
+        }
+        if (c.boite_de_vitesses) {
+            // Draw a star
+            g.setColor(Color.YELLOW);
+            int[] xPoints = {x + TAILLE - 30 - 5 - shapeSize, x + TAILLE - 30 - 5, x + TAILLE - 30 - 5 - (shapeSize / 2)};
+            int[] yPoints = {y + TAILLE - 30 - 5 - shapeSize, y + TAILLE - 30 - 5 - shapeSize, y + TAILLE - 30 - 5};
+            g.fillPolygon(xPoints, yPoints, 3);
+            int[] xPoints2 = {x + TAILLE - 30 - 5 - shapeSize, x + TAILLE - 30 - 5, x + TAILLE - 30 - 5 - (shapeSize / 2)};
+            int[] yPoints2 = {y + TAILLE - 30 - 5, y + TAILLE - 30 - 5 - shapeSize, y + TAILLE - 30 - 5 - (shapeSize / 2)};
+            g.fillPolygon(xPoints2, yPoints2, 3);
+        }
+
         g.setColor(Color.BLACK);
-        if (c.est_releve || (c instanceof oasis)) g.drawString(c.toString(),x+5,y+20);
-        if(c.getSable() != 0){
-            g.drawString("sable: " + c.getSable(),x+5,y+35);
+        if (c.est_releve || (c instanceof oasis)) g.drawString(c.toString(), x + 5, y + 20);
+        if (c.getSable() != 0) {
+            g.drawString("sable: " + c.getSable(), x + 5, y + 35);
         }
     }
+
 
     public void actionPerformed(ActionEvent e){
 
@@ -1727,14 +1782,16 @@ class DControleur {
                         String abilityInput;
                         int abilityUse;
                         do {
-                            abilityInput = JOptionPane.showInputDialog(vue, "Saisissez le numéro de la compétence que vous souhaitez utiliser：\n" +
-                                    "1.\nDépenser des actions pour tirer, à la fin de son tour, moins de cartes Tempête\n" +
-                                    "(1 carte par action) que ne le nécessite le niveau actuel de la Tempête de sable.\n" +
-                                    "2.\n" +
-                                    "dépenser 1 action pour regarder autant de cartes Tempête\n" +
-                                    "que son niveau actuel, puis en placer éventuellement\n" +
-                                    "une sous la pile. Les autres cartes sont remises\n" +
-                                    "sur le dessus de la pile dans l’ordre de son choix"
+                            abilityInput = JOptionPane.showInputDialog(vue, """
+                                    Saisissez le numéro de la compétence que vous souhaitez utiliser：
+                                    1.
+                                    Dépenser des actions pour tirer, à la fin de son tour, moins de cartes Tempête
+                                    (1 carte par action) que ne le nécessite le niveau actuel de la Tempête de sable.
+                                    2.
+                                    dépenser 1 action pour regarder autant de cartes Tempête
+                                    que son niveau actuel, puis en placer éventuellement
+                                    une sous la pile. Les autres cartes sont remises
+                                    sur le dessus de la pile dans l’ordre de son choix"""
                             );
                             abilityUse = Integer.parseInt(abilityInput);
                         } while (!(abilityUse == 1 || abilityUse == 2));
