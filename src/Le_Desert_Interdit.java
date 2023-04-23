@@ -582,7 +582,7 @@ abstract class player{
     protected int move = 4;
     protected int water = 4;
     protected int maxWater=4;
-    protected ArrayList<Equipement> tools;
+    protected ArrayList<Equipement> tools = new ArrayList<>();
     public player(DModele modele, String name, Color c) {
         this.modele = modele;
         this.name = name;
@@ -677,12 +677,16 @@ abstract class player{
         }
     }
 
-    public void tire_tool(){
+    public String tire_tool(){
+
         if(this.position.hasEquipement && this.position.est_releve){
             this.tools.add(this.position.modele.toolsCartes.get(0));
+            String toolName = this.position.modele.toolsCartes.get(0).nom;
             this.position.hasEquipement = false;
             this.position.modele.toolsCartes.remove(0);
+            return toolName;
         }
+        return "Notool";
     }
 
     public void use_tool(Equipement tool, Case c){
@@ -692,6 +696,7 @@ abstract class player{
                     if(this.position.get_4().contains(c)){
                         while (c.retireSable(1)) {}
                         tool.used = true;
+                        this.tools.remove(tool);
                     }
                     this.modele.notifyObservers();
                     break;
@@ -699,12 +704,14 @@ abstract class player{
                     if(c.sable<=1 && ! (c instanceof tempete)){
                         this.position = c;
                         tool.used = true;
+                        this.tools.remove(tool);
                     }
                     this.modele.notifyObservers();
                     break;
                 case 3:
                     this.position.estBouclier = true;
                     tool.used = true;
+                    this.tools.remove(tool);
                     this.modele.notifyObservers();
                     break;
                 case 4:
@@ -713,6 +720,7 @@ abstract class player{
                 case 5:
                     this.move +=2;
                     tool.used = true;
+                    this.tools.remove(tool);
                     this.modele.notifyObservers();
                     break;
                 case 6:
@@ -722,6 +730,7 @@ abstract class player{
                         n.ajouteGourde(2);
                     }
                     tool.used = true;
+                    this.tools.remove(tool);
                     this.modele.notifyObservers();
                     break;
             }
@@ -1143,6 +1152,7 @@ class DVue extends JFrame implements Observer, ActionListener {
         frame.add(buttons);
 
 
+
         frame.pack();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
@@ -1257,28 +1267,6 @@ class VueJoueur extends JPanel implements Observer,ActionListener{
     }
 
     public void actionPerformed(ActionEvent e){
-        switch(e.getActionCommand()){
-            case "equip0":
-                JFrame equipment = new VueEquipment(this.modele,this.controleur,0);
-                equipment.setVisible(true);
-                break;
-            case "equip1":
-                JFrame equipment1 = new VueEquipment(this.modele,this.controleur,1);
-                equipment1.setVisible(true);
-                break;
-            case "equip2":
-                JFrame equipment2 = new VueEquipment(this.modele,this.controleur,2);
-                equipment2.setVisible(true);
-                break;
-            case "equip3":
-                JFrame equipment3 = new VueEquipment(this.modele,this.controleur,3);
-                equipment3.setVisible(true);
-                break;
-            case "equip4":
-                JFrame equipment4 = new VueEquipment(this.modele,this.controleur,4);
-                equipment4.setVisible(true);
-                break;
-        }
         controleur.performAction(e.getActionCommand());
     }
 
@@ -1369,77 +1357,6 @@ class VueTempete extends JPanel implements Observer,ActionListener{
         controleur.performAction(e.getActionCommand());
     }
 
-}
-class VueEquipment extends JFrame implements Observer,ActionListener{
-    private DModele modele;
-    private DControleur controleur;
-    private player p;
-    private JTextField inputX;
-    private JTextField inputY;
-
-    public VueEquipment(DModele modele, DControleur controleur, int n){
-        this.modele = modele;
-        this.controleur = controleur;
-        p = this.modele.players.get(n);
-
-        setName("Equipments");
-        setSize(400,300);
-        setVisible(true);
-
-
-        for(Equipement tool: p.tools){
-            if(! tool.used) {
-                JButton b = new JButton(tool.nom);
-                b.setActionCommand(tool.nom);
-                b.addActionListener(this);
-                add(b);
-            }
-        }
-        inputX = new JTextField(10);
-        JButton submitButtonX = new JButton("Submit");
-        submitButtonX.setActionCommand("SUBMIT_INPUTX");
-        submitButtonX.addActionListener(this);
-
-        add(inputX);
-        add(submitButtonX);
-
-        inputY = new JTextField(10);
-        JButton submitButtonY = new JButton("Submit");
-        submitButtonY.setActionCommand("SUBMIT_INPUTY");
-        submitButtonY.addActionListener(this);
-
-        add(inputY);
-        add(submitButtonY);
-    }
-
-    @Override
-    public void update() {
-
-    }
-
-    public void actionPerformed(ActionEvent e){
-        String toolName = e.getActionCommand();
-        String x = new String();
-        String y = new String();
-        Equipement selectedTool = null;
-        for (Equipement tool : p.tools) {
-            if (tool.nom.equals(toolName)) {
-                selectedTool = tool;
-                break;
-            }
-        }
-        if ("SUBMIT_INPUTX".equals(e.getActionCommand())) {
-            x = inputX.getText();
-            inputX.setText(""); // Clear the input field
-        }
-        if ("SUBMIT_INPUTY".equals(e.getActionCommand())) {
-            y = inputX.getText();
-            inputX.setText(""); // Clear the input field
-        }
-        if (selectedTool != null&& x!=null) {
-            controleur.useTool(selectedTool,x,y);
-        }
-    }
 }
 
 class VueButtons extends JPanel implements Observer,ActionListener{
@@ -1565,6 +1482,9 @@ class VueGrille extends JPanel implements Observer,ActionListener, MouseListener
         if (c.est_releve || (c instanceof oasis)) g.drawString(c.toString(), x + 5, y + 20);
         if (c.getSable() != 0) {
             g.drawString("sable: " + c.getSable(), x + 5, y + 35);
+        }
+        if(c.estBouclier){
+            g.drawString("Bouclier", x+100,y+5);
         }
     }
 
@@ -1696,13 +1616,7 @@ class DControleur {
         player p = this.modele.players.get(currentPlayer);
         p.remove_sand(this.modele.cases[x][y]);
     }
-    public void useTool(Equipement tool,String x,String y){
-        player p = this.modele.players.get(currentPlayer);
-        if(Integer.parseInt(x)>=0 && Integer.parseInt(x)<=4
-            &&  Integer.parseInt(y)>=0 && Integer.parseInt(y)<=4){
-                p.use_tool(tool, modele.cases[Integer.parseInt(x)][Integer.parseInt(x)]);
-        }
-    }
+
 
     public void performAction(String action) {
         player p = this.modele.players.get(currentPlayer);
@@ -1724,7 +1638,10 @@ class DControleur {
                 break;
             case "exploration":
                 p.releveP();
-                p.tire_tool();
+                String s = p.tire_tool();
+                if(s!="Notool"){
+                    JOptionPane.showMessageDialog(vue,"Player" + p.name+" Obtenir "+s,"Equipment",JOptionPane.INFORMATION_MESSAGE);
+                }
                 break;
             case "DonnerEau0":
                 player objet0 = this.modele.players.get(0);
@@ -1745,6 +1662,207 @@ class DControleur {
             case "DonnerEau4":
                 player objet4 = this.modele.players.get(4);
                 if(objet4 != p) p.shareWater(objet4);
+                break;
+            case "equip0":
+                player p0 = this.modele.players.get(0);
+                String e0;
+                String coord0;
+                String alltool0 = "";
+                for(Equipement tool : p0.tools){
+                    alltool0 = alltool0 + tool.nom +" ";
+                }
+
+                e0 = JOptionPane.showInputDialog(vue, "tool possesed: "+alltool0);
+                Equipement selectedTool0 = null;
+                for (Equipement tool : p.tools) {
+                    if (tool.nom.equals(e0)) {
+                        selectedTool0 = tool;
+                        break;
+                    }
+                }
+                if(selectedTool0!=null) {
+                    if(selectedTool0.nom == "bouclier" || selectedTool0.nom =="boost" || selectedTool0.nom =="reserveEau")
+                        p0.use_tool(selectedTool0, this.modele.getCase(0, 0));
+                    else{
+                        int X0, Y0;
+                        do {
+                            coord0 = JOptionPane.showInputDialog(vue, "Entrez les coordonnées cibles (x, y) séparées par une virgule (entre (0,0) et (4,4)):");
+                            String[] coordinates0 = coord0.split(",");
+
+                            X0 = Integer.parseInt(coordinates0[0].trim());
+                            Y0 = Integer.parseInt(coordinates0[1].trim());
+                        } while (X0 < 0 || X0 > 4 || Y0 < 0 || Y0 > 4);
+
+                        if (selectedTool0.nom == "terrascope") {
+                            String equipment_status;
+                            if (this.modele.getCase(X0, Y0).hasEquipement) equipment_status = "has equipment";
+                            else equipment_status = "no equipment";
+                            JOptionPane.showMessageDialog(vue, this.modele.getCase(X0, Y0).getClass().getSimpleName() + " " + equipment_status, "terrascope", JOptionPane.INFORMATION_MESSAGE);
+                        } else p0.use_tool(selectedTool0, this.modele.getCase(X0, Y0));
+                    }
+                }
+                break;
+            case "equip1":
+                player p1 = this.modele.players.get(1);
+                String e1;
+                String coord1;
+                String alltool1 = new String();
+                for(Equipement tool : p1.tools){
+                    alltool1 = alltool1 + tool.nom +" ";
+                }
+
+                e1 = JOptionPane.showInputDialog(vue, "tool possesed: "+alltool1);
+                Equipement selectedTool1 = null;
+                for (Equipement tool : p.tools) {
+                    if (tool.nom.equals(e1)) {
+                        selectedTool1 = tool;
+                        break;
+                    }
+                }
+                if(selectedTool1!=null) {
+                    if(selectedTool1.nom == "bouclier" || selectedTool1.nom =="boost" || selectedTool1.nom =="reserveEau")
+                        p1.use_tool(selectedTool1, this.modele.getCase(0, 0));
+                    else {
+                        int X1, Y1;
+                        do {
+                            coord1 = JOptionPane.showInputDialog(vue, "Entrez les coordonnées cibles (x, y) séparées par une virgule (entre (0,0) et (4,4)):");
+                            String[] coordinates1 = coord1.split(",");
+
+                            X1 = Integer.parseInt(coordinates1[0].trim());
+                            Y1 = Integer.parseInt(coordinates1[1].trim());
+                        } while (X1 < 0 || X1 > 4 || Y1 < 0 || Y1 > 4);
+
+                        if (selectedTool1.nom == "terrascope") {
+                            String equipment_status;
+                            if (this.modele.getCase(X1, Y1).hasEquipement) equipment_status = "has equipment";
+                            else equipment_status = "no equipment";
+                            JOptionPane.showMessageDialog(vue, this.modele.getCase(X1, Y1).getClass().getSimpleName() + " " + equipment_status, "terrascope", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                        p1.use_tool(selectedTool1, this.modele.getCase(X1, Y1));
+                    }
+                }
+                break;
+            case "equip2":
+                player p2 = this.modele.players.get(2);
+                String e2;
+                String coord2;
+                String alltool2 = "";
+                for(Equipement tool : p2.tools){
+                    alltool2 = alltool2 + tool.nom +" ";
+                }
+
+                e2 = JOptionPane.showInputDialog(vue, "tool possesed: "+alltool2);
+                Equipement selectedTool2 = null;
+                for (Equipement tool : p.tools) {
+                    if (tool.nom.equals(e2)) {
+                        selectedTool2 = tool;
+                        break;
+                    }
+                }
+                if(selectedTool2!=null) {
+                    if(selectedTool2.nom == "bouclier" || selectedTool2.nom =="boost" || selectedTool2.nom =="reserveEau")
+                        p2.use_tool(selectedTool2, this.modele.getCase(0, 0));
+                    else {
+                        int X2, Y2;
+                        do {
+                            coord2 = JOptionPane.showInputDialog(vue, "Entrez les coordonnées cibles (x, y) séparées par une virgule (entre (0,0) et (4,4)):");
+                            String[] coordinates2 = coord2.split(",");
+
+                            X2 = Integer.parseInt(coordinates2[0].trim());
+                            Y2 = Integer.parseInt(coordinates2[1].trim());
+                        } while (X2 < 0 || X2 > 4 || Y2 < 0 || Y2 > 4);
+
+                        if (selectedTool2.nom == "terrascope") {
+                            String equipment_status;
+                            if (this.modele.getCase(X2, Y2).hasEquipement) equipment_status = "has equipment";
+                            else equipment_status = "no equipment";
+                            JOptionPane.showMessageDialog(vue, this.modele.getCase(X2, Y2).getClass().getSimpleName() + " " + equipment_status, "terrascope", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                        p2.use_tool(selectedTool2, this.modele.getCase(X2, Y2));
+                    }
+                }
+                break;
+
+            case "equip3":
+                player p3 = this.modele.players.get(3);
+                String e3;
+                String coord3;
+                String alltool3 = "";
+                for(Equipement tool : p3.tools){
+                    alltool3 = alltool3 + tool.nom +" ";
+                }
+
+                e3 = JOptionPane.showInputDialog(vue, "tool possesed: "+alltool3);
+                Equipement selectedTool3 = null;
+                for (Equipement tool : p.tools) {
+                    if (tool.nom.equals(e3)) {
+                        selectedTool3 = tool;
+                        break;
+                    }
+                }
+                if(selectedTool3!=null) {
+                    if(selectedTool3.nom == "bouclier" || selectedTool3.nom =="boost" || selectedTool3.nom =="reserveEau")
+                        p3.use_tool(selectedTool3, this.modele.getCase(0, 0));
+                    else {
+                        int X3, Y3;
+                        do {
+                            coord3 = JOptionPane.showInputDialog(vue, "Entrez les coordonnées cibles (x, y) séparées par une virgule (entre (0,0) et (4,4)):");
+                            String[] coordinates3 = coord3.split(",");
+
+                            X3 = Integer.parseInt(coordinates3[0].trim());
+                            Y3 = Integer.parseInt(coordinates3[1].trim());
+                        } while (X3 < 0 || X3 > 4 || Y3 < 0 || Y3 > 4);
+
+                        if (selectedTool3.nom == "terrascope") {
+                            String equipment_status;
+                            if (this.modele.getCase(X3, Y3).hasEquipement) equipment_status = "has equipment";
+                            else equipment_status = "no equipment";
+                            JOptionPane.showMessageDialog(vue, this.modele.getCase(X3, Y3).getClass().getSimpleName() + " " + equipment_status, "terrascope", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                        p3.use_tool(selectedTool3, this.modele.getCase(X3, Y3));
+                    }
+                }
+                break;
+
+            case "equip4":
+                player p4 = this.modele.players.get(4);
+                String e4;
+                String coord4;
+                String alltool4 = "";
+                for(Equipement tool : p4.tools){
+                    alltool4 = alltool4 + tool.nom +" ";
+                }
+
+                e4 = JOptionPane.showInputDialog(vue, "tool possesed: "+alltool4);
+                Equipement selectedTool4 = null;
+                for (Equipement tool : p.tools) {
+                    if (tool.nom.equals(e4)) {
+                        selectedTool4 = tool;
+                        break;
+                    }
+                }
+                if(selectedTool4!=null) {
+                    if(selectedTool4.nom == "bouclier" || selectedTool4.nom =="boost" || selectedTool4.nom =="reserveEau")
+                        p4.use_tool(selectedTool4, this.modele.getCase(0, 0));
+                    else {
+                        int X4, Y4;
+                        do {
+                            coord4 = JOptionPane.showInputDialog(vue, "Entrez les coordonnées cibles (x, y) séparées par une virgule (entre (0,0) et (4,4)):");
+                            String[] coordinates4 = coord4.split(",");
+
+                            X4 = Integer.parseInt(coordinates4[0].trim());
+                            Y4 = Integer.parseInt(coordinates4[1].trim());
+                        } while (X4 < 0 || X4 > 4 || Y4 < 0 || Y4 > 4);
+
+                        if (selectedTool4.nom == "terrascope") {
+                            String equipment_status;
+                            if (this.modele.getCase(X4, Y4).hasEquipement) equipment_status = "has equipment";
+                            else equipment_status = "no equipment";
+                            JOptionPane.showMessageDialog(vue, this.modele.getCase(X4, Y4).getClass().getSimpleName() + " " + equipment_status, "terrascope", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                        p4.use_tool(selectedTool4, this.modele.getCase(X4, Y4));
+                    }
+                }
                 break;
             case "pickPiece":
                 p.getPiece();
