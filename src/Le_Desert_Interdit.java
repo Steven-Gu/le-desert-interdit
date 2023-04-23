@@ -1,6 +1,4 @@
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicButtonListener;
-import javax.swing.plaf.basic.BasicOptionPaneUI;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,11 +7,11 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class Le_Desert_Interdit{
     public static void main(String[] args){
         EventQueue.invokeLater(() -> {
-            /* Voici le contenu qui nous intéresse. */
             DModele modele = new DModele();
             DVue vue = new DVue(modele);
         });
@@ -57,7 +55,7 @@ class DModele extends Observable {
     protected Case CaseTempete;
     protected Case pos_initiale;
     protected ArrayList<player> players = new ArrayList<>();
-    protected static int sableReste = 48;
+    protected  int sableReste = 48;
 
     protected int niveauTempete;
 
@@ -379,6 +377,10 @@ abstract class Case {
         return cases;
     }
 
+    public boolean hasPiece(){
+        return systeme_de_navigation || cristal_d_energie || boite_de_vitesses || helice;
+    }
+
 }
 
 class city extends Case{
@@ -577,6 +579,7 @@ abstract class player{
     protected Case position;
     protected String name;
     protected Color couleur;
+    public String description;
     protected int move = 4;
     protected int water = 4;
     protected int maxWater=4;
@@ -586,7 +589,7 @@ abstract class player{
         this.name = name;
         this.couleur = c;
     }
-
+    abstract public String getDescription();
     public void setCase(Case c){
         this.position = c;
         c.players.add(this);
@@ -610,6 +613,12 @@ abstract class player{
         for (Case c : this.position.get_4()) {
             if (!(c instanceof tempete) && c.getSable() < 2) list.add(c);
         }
+        if(this.position.est_releve && this.position instanceof tunnel){
+            Case t1 = ((tunnel) this.position).getAutre1();
+            Case t2 = ((tunnel) this.position).getAutre2();
+            if(t1.est_releve && t1.getSable() < 2) list.add(t1);
+            if(t2.est_releve && t2.getSable() < 2) list.add(t2);
+        }
         return list;
     }
 
@@ -623,7 +632,7 @@ abstract class player{
         }
     }
     public void shareWater(player a){
-        if(a.position == this.position && this.water > 1){
+        if(a.position == this.position && this.water > 1 && a.water<a.maxWater){
             a.ajouteGourde(1);
             this.water -= 1;
             this.modele.notifyObservers();
@@ -647,14 +656,16 @@ abstract class player{
     }
 
     //move to another case
-    public void deplace(Case c){
+    public boolean deplace(Case c){
         if(this.casedispo().contains(c) && this.move > 0){
             this.position.players.remove(this);
             this.position = c;
             this.position.players.add(this);
             this.move = this.move -1;
             this.modele.notifyObservers();
+            return true;
         }
+        return false;
     }
 
     //remove sand on the given case
@@ -719,9 +730,31 @@ abstract class player{
         }
     }
 
+    public void getPiece(){
+        if(this.position.hasPiece() && this.move > 0){
+            if(this.position.helice){
+                this.modele.helice = true;
+                this.position.helice = false;
+            }else if(this.position.systeme_de_navigation){
+                this.modele.systeme_de_navigation = true;
+                this.position.systeme_de_navigation = false;
+            }else if(this.position.boite_de_vitesses){
+                this.modele.boite_de_vitesses = true;
+                this.position.boite_de_vitesses = false;
+            }else{
+                this.modele.cristal_d_energie = true;
+                this.position.cristal_d_energie = false;
+            }
+            this.move = this.move -1;
+            this.modele.notifyObservers();
+        }
+    }
+
 }
 
 class archeologue extends player{
+    public String description = "L’archéologue peut enlever 2 marqueurs\nSable sur la même tuile pour 1 action.";
+    public String getDescription(){return this.description;}
 
     public archeologue(DModele modele, String name, Color c) {
         super(modele, name, c);
@@ -737,6 +770,14 @@ class archeologue extends player{
 }
 
 class alpiniste extends player{
+    public String description = "L’alpiniste peut aller sur les tuiles bloquées\n" +
+            "(les tuiles ayant au moins 2 marqueurs Sable).\n" +
+            "Elle peut aussi emmener un autre joueur avec elle\n" +
+            "à chaque fois qu’elle se déplace. Tous les pions\n" +
+            "sur la tuile de l’alpiniste ne sont jamais enlisés\n" +
+            "et peuvent quitter la tuile de l’alpiniste même\n" +
+            "s’il y a 2 marqueurs Sable ou plus.";
+    public String getDescription(){return this.description;}
     public alpiniste(DModele modele, String name, Color c) {
         super(modele, name, c);
     }
@@ -750,18 +791,23 @@ class alpiniste extends player{
     }
 
 
-    public void deplaceAvec(Case c,player a) {
-        this.deplace(c);
-        if(this.position.players.contains(a)) {
+    public boolean deplaceAvec(Case c,player a) {
+        if(this.position.players.contains(a) && this.casedispo().contains(c)) {
             a.position.players.remove(a);
             a.setCase(c);
             a.position.players.add(a);
+            this.deplace(c);
+            this.modele.notifyObservers();
+            return true;
         }
-        this.modele.notifyObservers();
+        return false;
     }
 
 }
 class explorateur extends player{
+    public String description = "L’explorateur peut se déplacer, enlever du sable\n" +
+            "et utiliser les « Blasters » diagonalement.";
+    public String getDescription(){return this.description;}
     public explorateur(DModele modele, String name, Color c) {
         super(modele, name, c);
     }
@@ -783,41 +829,38 @@ class explorateur extends player{
     }
 }
 class meteorologue extends player{
+    public String description = "La météorologue peut dépenser des actions pour\n" +
+            "tirer, à la fin de son tour, moins de cartes Tempête\n" +
+            "(1 carte par action) que ne le nécessite le niveau actuel\n" +
+            "de la Tempête de sable. Elle peut aussi dépenser\n" +
+            "1 action pour regarder autant de cartes Tempête que\n" +
+            "son niveau actuel, puis en placer éventuellement\n" +
+            "une sous la pile. Les autres cartes sont remises\n" +
+            "sur le dessus de la pile dans l’ordre de son choix.";
+    public String getDescription(){return this.description;}
     public meteorologue(DModele modele, String name, Color c) {
         super(modele, name, c);
     }
-    public void voirCarte(){
-
-    }
 }
 class navigateur extends player{
+    public String description = "La navigatrice peut déplacer un autre joueur jusqu’à\n" +
+            "3 tuiles non bloquées par action, Tunnels inclus.\n" +
+            "Elle peut déplacer l’explorateur diagonalement\n" +
+            "et peut déplacer l’alpiniste sur les tuiles bloquées.\n" +
+            "Déplacée ainsi, l’alpiniste peut aussi utiliser son\n" +
+            "pouvoir et emmener un autre joueur (dont la navigatrice) !";
+    public String getDescription(){return this.description;}
     public navigateur(DModele modele, String name, Color c) {
         super(modele, name, c);
     }
-    protected int n = 3;
-    private void deplaceNormal(player a,Case c1){
-        a.deplace(c1);
-    }
-    private void deplaceAlpiniste(alpiniste a,Case c1, player b){
-        a.deplaceAvec(c1,b);
-        this.modele.notifyObservers();
-    }
-    public void navigate(alpiniste a,Case c1,Case c2, Case c3, player p1, player p2,player p3){
-        deplaceAlpiniste(a,c1,p1);
-        deplaceAlpiniste(a,c2,p2);
-        deplaceAlpiniste(a,c3,p3);
-        this.modele.notifyObservers();
-    }
-    public void navigate(player a,Case c1,Case c2, Case c3){
-        deplaceNormal(a,c1);
-        deplaceNormal(a,c2);
-        deplaceNormal(a,c3);
-        this.modele.notifyObservers();
-    }
-
-
 }
 class porteuse extends player{
+    public String description = "La porteuse d’eau peut prendre 2 portions d’eau\n" +
+            "des tuiles « Point d’eau » déjà révélées pour 1 action.\n" +
+            "Elle peut aussi donner de l’eau aux joueurs sur les\n" +
+            "tuiles adjacentes gratuitement et à tout moment.\n" +
+            "Sa gourde commence avec 5 portions d’eau (au lieu de 4).";
+    public String getDescription(){return this.description;}
 
     public porteuse(DModele modele, String name, Color c) {
         super(modele, name, c);
@@ -833,7 +876,7 @@ class porteuse extends player{
 
     public void getWater(){
         if((this.position) instanceof oasis){
-            this.water ++;
+           this.ajouteGourde(2);
             this.move --;
         }
         this.modele.notifyObservers();
@@ -896,6 +939,17 @@ class le_vent_souffle extends Carte_Tempete {
         int initial_ty = this.modele.CaseTempete.get_y();
         int tx = initial_tx;
         int ty = initial_ty;
+        boolean bv = false,h = false,cn = false,sn = false;
+        if(this.modele.CaseTempete.hasPiece()){
+            bv = modele.CaseTempete.boite_de_vitesses;
+            modele.CaseTempete.boite_de_vitesses = false;
+            h = modele.CaseTempete.helice;
+            modele.CaseTempete.helice = false;
+            cn = modele.CaseTempete.cristal_d_energie;
+            modele.CaseTempete.cristal_d_energie = false;
+            sn = modele.CaseTempete.systeme_de_navigation;
+            modele.CaseTempete.systeme_de_navigation = false;
+        }
         switch (direction) {
             case 0: //left
                 for (int i = 0; i < distance; i++) {
@@ -904,6 +958,22 @@ class le_vent_souffle extends Carte_Tempete {
                         this.modele.cases[tx][ty] = this.modele.cases[tx][ty - 1];
                         this.modele.cases[tx][ty].setY(ty);
                         this.modele.cases[tx][ty].ajouteSable();
+                        if(bv) {
+                            this.modele.cases[tx][ty].boite_de_vitesses = true;
+                            bv = false;
+                        }
+                        if(h) {
+                            this.modele.cases[tx][ty].helice = true;
+                            h = false;
+                        }
+                        if(cn){
+                            this.modele.cases[tx][ty].cristal_d_energie = true;
+                            cn = false;
+                        }
+                        if(sn){
+                            this.modele.cases[tx][ty].systeme_de_navigation = true;
+                            sn = false;
+                        }
                         tmp.setY(ty - 1);
                         this.modele.cases[tx][ty - 1] = tmp;
                         ty--;
@@ -918,6 +988,22 @@ class le_vent_souffle extends Carte_Tempete {
                         this.modele.cases[tx][ty] = this.modele.cases[tx][ty + 1];
                         this.modele.cases[tx][ty].setY(ty);
                         this.modele.cases[tx][ty].ajouteSable();
+                        if(bv) {
+                            this.modele.cases[tx][ty].boite_de_vitesses = true;
+                            bv = false;
+                        }
+                        if(h) {
+                            this.modele.cases[tx][ty].helice = true;
+                            h = false;
+                        }
+                        if(cn){
+                            this.modele.cases[tx][ty].cristal_d_energie = true;
+                            cn = false;
+                        }
+                        if(sn){
+                            this.modele.cases[tx][ty].systeme_de_navigation = true;
+                            sn = false;
+                        }
                         tmp.setY(ty + 1);
                         this.modele.cases[tx][ty + 1] = tmp;
                         ty++;
@@ -932,6 +1018,22 @@ class le_vent_souffle extends Carte_Tempete {
                         this.modele.cases[tx][ty] = this.modele.cases[tx - 1][ty];
                         this.modele.cases[tx][ty].setX(tx);
                         this.modele.cases[tx][ty].ajouteSable();
+                        if(bv) {
+                            this.modele.cases[tx][ty].boite_de_vitesses = true;
+                            bv = false;
+                        }
+                        if(h) {
+                            this.modele.cases[tx][ty].helice = true;
+                            h = false;
+                        }
+                        if(cn){
+                            this.modele.cases[tx][ty].cristal_d_energie = true;
+                            cn = false;
+                        }
+                        if(sn){
+                            this.modele.cases[tx][ty].systeme_de_navigation = true;
+                            sn = false;
+                        }
                         tmp.setX(tx - 1);
                         this.modele.cases[tx - 1][ty] = tmp;
                         tx--;
@@ -946,6 +1048,22 @@ class le_vent_souffle extends Carte_Tempete {
                         this.modele.cases[tx][ty] = this.modele.cases[tx + 1][ty];
                         this.modele.cases[tx][ty].setX(tx);
                         this.modele.cases[tx][ty].ajouteSable();
+                        if(bv) {
+                            this.modele.cases[tx][ty].boite_de_vitesses = true;
+                            bv = false;
+                        }
+                        if(h) {
+                            this.modele.cases[tx][ty].helice = true;
+                            h = false;
+                        }
+                        if(cn){
+                            this.modele.cases[tx][ty].cristal_d_energie = true;
+                            cn = false;
+                        }
+                        if(sn){
+                            this.modele.cases[tx][ty].systeme_de_navigation = true;
+                            sn = false;
+                        }
                         tmp.setX(tx + 1);
                         this.modele.cases[tx + 1][ty] = tmp;
                         tx++;
@@ -1119,9 +1237,7 @@ class VueJoueur extends JPanel implements Observer,ActionListener{
         this.modele = modele;
         this.controleur = controleur;
         modele.addObserver(this);
-        setBounds(0,105,240,600);
-        //Dimension d = new Dimension(240,600);
-        //this.setPreferredSize(d);
+        setBounds(0,165,240,600);
         setLayout(null);
 
         for(int i = 0; i < modele.players.size();i++){
@@ -1357,9 +1473,7 @@ class VueGrille extends JPanel implements Observer,ActionListener, MouseListener
         this.modele = modele;
         this.controleur = controleur;
         modele.addObserver(this);
-        //Dimension dim = new Dimension(TAILLE*DModele.LARGEUR,TAILLE*DModele.HAUTEUR);
-        //this.setPreferredSize(dim);
-        setBounds(240,0,TAILLE*DModele.LARGEUR,TAILLE*DModele.HAUTEUR);
+        setBounds(245,0,TAILLE*DModele.LARGEUR,TAILLE*DModele.HAUTEUR);
         addMouseListener(this);
     }
 
@@ -1480,7 +1594,7 @@ class DControleur {
                 if (playerName != null && !playerName.trim().isEmpty()) {
                     player p = modele.tirerCarteJoueur(playerName,couleurs.get(i));
                     validInput = true;
-                    JOptionPane.showMessageDialog(vue, "Vous avez biocher: " + p.getClass().getName(), "Pioche",JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(vue, "Vous avez biocher: " + p.getClass().getName()+"\n\n"+p.getDescription(), "Pioche",JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(vue, "Veuillez saisir un nom valid.", "Invalid Input", JOptionPane.ERROR_MESSAGE);
                     validInput = false;
@@ -1513,7 +1627,14 @@ class DControleur {
     public void deplace(int x, int y){
         player p = this.modele.players.get(currentPlayer);
         p.deplace(this.modele.cases[x][y]);
-
+        this.modele.win();
+        if (modele.estGagne) {
+            JOptionPane.showMessageDialog(vue, "Félicitations! Vous avez gagné!", "Victoire", JOptionPane.INFORMATION_MESSAGE);
+            System.exit(0);
+        } else if (modele.estPerdu) {
+            JOptionPane.showMessageDialog(vue, "Dommage! Vous avez perdu!", "Défaite", JOptionPane.ERROR_MESSAGE);
+            System.exit(0);
+        }
     }
 
     public void removeSand(int x, int y){
@@ -1529,7 +1650,6 @@ class DControleur {
     }
 
     public void performAction(String action) {
-        // Perform the action based on the given action command
         player p = this.modele.players.get(currentPlayer);
         switch (action) {
             case "TireCarte":
@@ -1551,9 +1671,189 @@ class DControleur {
                 p.releveP();
                 p.tire_tool();
                 break;
+            case "DonnerEau0":
+                player objet0 = this.modele.players.get(0);
+                if(objet0 != p) p.shareWater(objet0);
+                break;
+            case "DonnerEau1":
+                player objet1 = this.modele.players.get(1);
+                if(objet1 != p) p.shareWater(objet1);
+                break;
+            case "DonnerEau2":
+                player objet2 = this.modele.players.get(2);
+                if(objet2 != p) p.shareWater(objet2);
+                break;
+            case "DonnerEau3":
+                player objet3 = this.modele.players.get(3);
+                if(objet3 != p) p.shareWater(objet3);
+                break;
+            case "DonnerEau4":
+                player objet4 = this.modele.players.get(4);
+                if(objet4 != p) p.shareWater(objet4);
+                break;
+            case "pickPiece":
+                p.getPiece();
+                break;
+            case "equipTire":
+                p.tire_tool();
+                break;
+            case "ability":
+                if(p.move > 0) {
+                    if (p instanceof porteuse) ((porteuse) p).getWater();
+                    if (p instanceof alpiniste) {
+                        int targetPlayerId;
+                        String playerIdInput;
+                        do {
+                            playerIdInput = JOptionPane.showInputDialog(vue, "Entrez l'ID du joueur à déplacer avec l'Alpiniste (entre 0 et " + (this.modele.nbJoueur - 1) + "):");
+                            targetPlayerId = Integer.parseInt(playerIdInput);
+                        } while (targetPlayerId < 0 || targetPlayerId >= this.modele.nbJoueur);
 
+                        int targetX, targetY;
+                        String coordinateInput;
+                        do {
+                            coordinateInput = JOptionPane.showInputDialog(vue, "Entrez les coordonnées cibles (x, y) séparées par une virgule (entre (0,0) et (4,4)):");
+                            String[] coordinates = coordinateInput.split(",");
+
+                            targetX = Integer.parseInt(coordinates[0].trim());
+                            targetY = Integer.parseInt(coordinates[1].trim());
+                        } while (targetX < 0 || targetX > 4 || targetY < 0 || targetY > 4);
+
+                        player targetPlayer = modele.players.get(targetPlayerId);
+                        Case targetCase = modele.cases[targetX][targetY];
+
+                        ((alpiniste) p).deplaceAvec(targetCase, targetPlayer);
+                    }
+                    if (p instanceof meteorologue) {
+                        String abilityInput;
+                        int abilityUse;
+                        do {
+                            abilityInput = JOptionPane.showInputDialog(vue, "Saisissez le numéro de la compétence que vous souhaitez utiliser：\n" +
+                                    "1.\nDépenser des actions pour tirer, à la fin de son tour, moins de cartes Tempête\n" +
+                                    "(1 carte par action) que ne le nécessite le niveau actuel de la Tempête de sable.\n" +
+                                    "2.\n" +
+                                    "dépenser 1 action pour regarder autant de cartes Tempête\n" +
+                                    "que son niveau actuel, puis en placer éventuellement\n" +
+                                    "une sous la pile. Les autres cartes sont remises\n" +
+                                    "sur le dessus de la pile dans l’ordre de son choix"
+                            );
+                            abilityUse = Integer.parseInt(abilityInput);
+                        } while (!(abilityUse == 1 || abilityUse == 2));
+                        if (abilityUse == 1) {
+                            nbCarteTempeteTire++;
+                            p.move--;
+                        }else {
+                            p.move--;
+                            ArrayList<Carte_Tempete> drawnCards = new ArrayList<>();
+                            for (int i = 0; i < this.modele.niveauTempete; i++) {
+                                if (this.modele.cartes.size() > i) {
+                                    drawnCards.add(this.modele.cartes.remove(i));
+                                }
+                            }
+
+                            String drawnCardsString = drawnCards.stream()
+                                    .map(card -> card.getClass().getSimpleName())
+                                    .collect(Collectors.joining(", "));
+
+                            String bottomCardInput;
+                            int bottomCardIndex;
+                            do {
+                                bottomCardInput = JOptionPane.showInputDialog(vue, "Cartes tirées: " + drawnCardsString +
+                                        "\nEntrez l'index de la carte à placer sous la pile (entre 1 et " + drawnCards.size() + ", ou 0 pour ne pas en placer):");
+                                bottomCardIndex = Integer.parseInt(bottomCardInput);
+                            } while (bottomCardIndex < 0 || bottomCardIndex > drawnCards.size());
+
+                            Carte_Tempete bottomCard = null;
+                            if (bottomCardIndex != 0) {
+                                bottomCard = drawnCards.remove(bottomCardIndex - 1);
+                            }
+                            if(!drawnCards.isEmpty()) {
+                                drawnCardsString = drawnCards.stream()
+                                        .map(card -> card.getClass().getSimpleName())
+                                        .collect(Collectors.joining(", "));
+
+                                String reorderedCardsInput = JOptionPane.showInputDialog(vue, "Cartes restantes: " + drawnCardsString +
+                                        "\nEntrez l'ordre des cartes restantes, séparées par des virgules:");
+
+                                String[] reorderedCardIndexes = reorderedCardsInput.split(",");
+                                ArrayList<Carte_Tempete> reorderedCards = new ArrayList<>();
+
+                                for (String indexStr : reorderedCardIndexes) {
+                                    int cardIndex = Integer.parseInt(indexStr.trim()) - 1;
+                                    reorderedCards.add(drawnCards.get(cardIndex));
+                                }
+
+                                for (int i = reorderedCards.size() - 1; i >= 0; i--) {
+                                    this.modele.cartes.add(0, reorderedCards.get(i));
+                                }
+                            }
+                            if (bottomCard != null) {
+                                this.modele.cartes.add(bottomCard);
+                            }
+                        }
+
+                    }
+                    if (p instanceof navigateur){
+                        p.move--;
+                        int targetPlayerId;
+                        String playerIdInput;
+                        do {
+                            playerIdInput = JOptionPane.showInputDialog(vue, "Entrez l'ID du joueur à naviguer (entre 0 et " + (this.modele.nbJoueur - 1) + "):");
+                            targetPlayerId = Integer.parseInt(playerIdInput);
+                        } while (targetPlayerId < 0 || targetPlayerId >= this.modele.nbJoueur);
+                        int n = 3;
+                        int targetX, targetY;
+                        String coordinateInput;
+                        player targetPlayer = modele.players.get(targetPlayerId);
+                        targetPlayer.move+=3;
+                        boolean useAlpinistAbility = false;
+                        while(n > 0) {
+                            do {
+                                coordinateInput = JOptionPane.showInputDialog(vue, "Entrez les coordonnées cibles (x, y) séparées par une virgule (entre (0,0) et (4,4)):");
+                                String[] coordinates = coordinateInput.split(",");
+
+                                targetX = Integer.parseInt(coordinates[0].trim());
+                                targetY = Integer.parseInt(coordinates[1].trim());
+                            } while (targetX < 0 || targetX > 4 || targetY < 0 || targetY > 4);
+
+                            Case targetCase = modele.cases[targetX][targetY];
+                            if (targetPlayer instanceof alpiniste) {
+                                int choice = JOptionPane.showOptionDialog(vue, "Voulez-vous utiliser l'aptitude de l'Alpiniste pour déplacer quelqu'un avec lui?",
+                                        "Choix d'aptitude", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);
+                                useAlpinistAbility = (choice == JOptionPane.YES_OPTION);
+                            }
+
+                            if (useAlpinistAbility) {
+                                // Handle Alpinist's ability to move with someone else
+                                int otherPlayerId;
+                                do {
+                                    playerIdInput = JOptionPane.showInputDialog(vue, "Entrez l'ID du joueur à déplacer avec l'Alpiniste (entre 0 et " + (this.modele.nbJoueur - 1) + "):");
+                                    otherPlayerId = Integer.parseInt(playerIdInput);
+                                } while (otherPlayerId < 0 || otherPlayerId >= this.modele.nbJoueur || otherPlayerId == targetPlayerId);
+
+                                player otherPlayer = modele.players.get(otherPlayerId);
+                                if (((alpiniste) targetPlayer).deplaceAvec(targetCase, otherPlayer)) {
+                                    n--;
+                                }
+                            } else {
+                                // Normal move
+                                if (targetPlayer.deplace(targetCase)) {
+                                    n--;
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
             default:
                 System.out.println("Unknown action command: " + action);
+        }
+        this.modele.win();
+        if (modele.estGagne) {
+            JOptionPane.showMessageDialog(vue, "Félicitations! Vous avez gagné!", "Victoire", JOptionPane.INFORMATION_MESSAGE);
+            System.exit(0);
+        } else if (modele.estPerdu) {
+            JOptionPane.showMessageDialog(vue, "Dommage! Vous avez perdu!", "Défaite", JOptionPane.ERROR_MESSAGE);
+            System.exit(0);
         }
     }
 }
