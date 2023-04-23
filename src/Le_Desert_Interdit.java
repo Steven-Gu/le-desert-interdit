@@ -667,6 +667,14 @@ abstract class player{
         }
     }
 
+    public void tire_tool(){
+        if(this.position.hasEquipement && this.position.est_releve){
+            this.tools.add(this.position.modele.toolsCartes.get(0));
+            this.position.hasEquipement = false;
+            this.position.modele.toolsCartes.remove(0);
+        }
+    }
+
     public void use_tool(Equipement tool, Case c){
         if(this.tools.contains(tool)){
             switch(tool.n_tool){
@@ -998,16 +1006,19 @@ class DVue extends JFrame implements Observer, ActionListener {
 
         frame.setPreferredSize(new Dimension(1500,1000));
         frame.setLayout(null);
+
         VueGrille grille = new VueGrille(modele,controleur);
         VueJoueur joueur = new VueJoueur(modele,controleur);
         VueTempete tempete = new VueTempete(modele,controleur);
         VueStatus status = new VueStatus(modele,controleur);
         VueButtons buttons = new VueButtons(modele,controleur);
+
         frame.add(joueur);
         frame.add(grille);
         frame.add(tempete);
         frame.add(status);
         frame.add(buttons);
+
 
         frame.pack();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -1030,27 +1041,38 @@ class VueStatus extends JPanel implements Observer,ActionListener{
     private DControleur controleur;
     private JTextField textT = new JTextField();
     private JTextField textS = new JTextField();
+    private JTextArea piece1 = new JTextArea();
+    private JTextArea piece2 = new JTextArea();
 
     public VueStatus(DModele modele,DControleur controleur){
         this.modele = modele;
         this.controleur = controleur;
         this.modele.addObserver(this);
 
-        setBounds(0,0,240,100);
+        setBounds(0,0,240,160);
         setBorder(BorderFactory.createLineBorder(Color.BLUE,3));
 
         textT = new JTextField("Niveau tempete: " + this.modele.niveauTempete);
         textS = new JTextField("Total Sable: " + this.modele.sableReste);
-
+        piece1 = new JTextArea("Helice: " + Boolean.toString(this.modele.helice)
+                +"\nboite de vitesse: "+Boolean.toString(this.modele.boite_de_vitesses));
+        piece2 = new JTextArea("Systeme de navigation: " + Boolean.toString(this.modele.systeme_de_navigation)
+                +"\ncristal d'énergie: "+Boolean.toString(this.modele.cristal_d_energie));
 
         add(textT);
         add(textS);
+        add(piece1);
+        add(piece2);
 
     }
     @Override
     public void update() {
         textT.setText("Niveau tempete: " + this.modele.niveauTempete);
         textS.setText("Total Sable: " + this.modele.sableReste);
+        piece1.setText("Helice: " + Boolean.toString(this.modele.helice)
+                +"\nboite de vitesse: "+Boolean.toString(this.modele.boite_de_vitesses));
+        piece2.setText("Systeme de navigation: " + Boolean.toString(this.modele.systeme_de_navigation)
+                +"\ncristal d'énergie: "+Boolean.toString(this.modele.cristal_d_energie));
         repaint();
     }
 
@@ -1058,6 +1080,34 @@ class VueStatus extends JPanel implements Observer,ActionListener{
         controleur.performAction(e.getActionCommand());
     }
 }
+
+
+class VueIndicate extends JPanel implements Observer{
+    private DModele modele;
+    private DControleur controleur;
+    private JTextArea text = new JTextArea();
+
+
+    public VueIndicate(DModele modele,DControleur controleur){
+        this.modele = modele;
+        this.controleur = controleur;
+        this.modele.addObserver(this);
+
+        setBounds(1000,255,240,200);
+        setBorder(BorderFactory.createLineBorder(Color.GRAY,3));
+
+        text.setLineWrap(true);
+
+
+        add(text);
+    }
+
+    @Override
+    public void update() {
+        repaint();
+    }
+}
+
 class VueJoueur extends JPanel implements Observer,ActionListener{
     private DModele modele;
     private DControleur controleur;
@@ -1096,11 +1146,11 @@ class VueJoueur extends JPanel implements Observer,ActionListener{
         waterFields.add(water);
 
         JButton equip = new JButton("Equipment");
-        equip.setActionCommand("equip"+s);
+        equip.setActionCommand("equip"+n);
         equip.addActionListener(this);
 
         JButton donnerEau = new JButton("Donner Eau");
-        donnerEau.setActionCommand("DonnerEau"+s);
+        donnerEau.setActionCommand("DonnerEau"+n);
         donnerEau.addActionListener(this);
 
         panel.add(nameText);
@@ -1114,12 +1164,26 @@ class VueJoueur extends JPanel implements Observer,ActionListener{
 
     public void actionPerformed(ActionEvent e){
         switch(e.getActionCommand()){
-            case "equipplayer0":
+            case "equip0":
                 JFrame equipment = new VueEquipment(this.modele,this.controleur,0);
-            case "equipplayer1":
-                JFrame equipment1 = new VueEquipment(this.modele,this.controleur,0);
-            case "equipplayer2":
-                JFrame equipment2 = new VueEquipment(this.modele,this.controleur,0);
+                equipment.setVisible(true);
+                break;
+            case "equip1":
+                JFrame equipment1 = new VueEquipment(this.modele,this.controleur,1);
+                equipment1.setVisible(true);
+                break;
+            case "equip2":
+                JFrame equipment2 = new VueEquipment(this.modele,this.controleur,2);
+                equipment2.setVisible(true);
+                break;
+            case "equip3":
+                JFrame equipment3 = new VueEquipment(this.modele,this.controleur,3);
+                equipment3.setVisible(true);
+                break;
+            case "equip4":
+                JFrame equipment4 = new VueEquipment(this.modele,this.controleur,4);
+                equipment4.setVisible(true);
+                break;
         }
         controleur.performAction(e.getActionCommand());
     }
@@ -1145,7 +1209,7 @@ class VueTempete extends JPanel implements Observer,ActionListener{
         this.modele = modele;
         this.controleur = controleur;
 
-        setBounds(1000,0,240,120);
+        setBounds(1000,0,240,60);
         setBorder(BorderFactory.createLineBorder(Color.RED,3));
 
         JTextField textT = new JTextField("Cartes Tempete");
@@ -1170,11 +1234,14 @@ class VueTempete extends JPanel implements Observer,ActionListener{
 class VueEquipment extends JFrame implements Observer,ActionListener{
     private DModele modele;
     private DControleur controleur;
+    private player p;
+    private JTextField inputX;
+    private JTextField inputY;
 
     public VueEquipment(DModele modele, DControleur controleur, int n){
         this.modele = modele;
         this.controleur = controleur;
-        player p = this.modele.players.get(n);
+        p = this.modele.players.get(n);
 
         setName("Equipments");
         setSize(400,300);
@@ -1182,12 +1249,28 @@ class VueEquipment extends JFrame implements Observer,ActionListener{
 
 
         for(Equipement tool: p.tools){
-            JButton b = new JButton(tool.nom);
-            b.setActionCommand(tool.nom);
-            b.addActionListener(this);
-            add(b);
+            if(! tool.used) {
+                JButton b = new JButton(tool.nom);
+                b.setActionCommand(tool.nom);
+                b.addActionListener(this);
+                add(b);
+            }
         }
+        inputX = new JTextField(10);
+        JButton submitButtonX = new JButton("Submit");
+        submitButtonX.setActionCommand("SUBMIT_INPUTX");
+        submitButtonX.addActionListener(this);
 
+        add(inputX);
+        add(submitButtonX);
+
+        inputY = new JTextField(10);
+        JButton submitButtonY = new JButton("Submit");
+        submitButtonY.setActionCommand("SUBMIT_INPUTY");
+        submitButtonY.addActionListener(this);
+
+        add(inputY);
+        add(submitButtonY);
     }
 
     @Override
@@ -1196,7 +1279,27 @@ class VueEquipment extends JFrame implements Observer,ActionListener{
     }
 
     public void actionPerformed(ActionEvent e){
-        controleur.performAction(e.getActionCommand());
+        String toolName = e.getActionCommand();
+        String x = new String();
+        String y = new String();
+        Equipement selectedTool = null;
+        for (Equipement tool : p.tools) {
+            if (tool.nom.equals(toolName)) {
+                selectedTool = tool;
+                break;
+            }
+        }
+        if ("SUBMIT_INPUTX".equals(e.getActionCommand())) {
+            x = inputX.getText();
+            inputX.setText(""); // Clear the input field
+        }
+        if ("SUBMIT_INPUTY".equals(e.getActionCommand())) {
+            y = inputX.getText();
+            inputX.setText(""); // Clear the input field
+        }
+        if (selectedTool != null&& x!=null) {
+            controleur.useTool(selectedTool,x,y);
+        }
     }
 }
 
@@ -1208,7 +1311,7 @@ class VueButtons extends JPanel implements Observer,ActionListener{
         this.modele = modele;
         this.controleur = controleur;
 
-        setBounds(1000,125,240,80);
+        setBounds(1000,65,240,180);
         setBorder(BorderFactory.createLineBorder(Color.RED,3));
 
         JButton exploration = new JButton("exploration");
@@ -1219,8 +1322,19 @@ class VueButtons extends JPanel implements Observer,ActionListener{
         fintour.setActionCommand("finTour");
         fintour.addActionListener(this);
 
+        JButton pickPiece = new JButton("Obetenir un piece");
+        pickPiece.setActionCommand("pickPiece");
+        pickPiece.addActionListener(this);
+
+        JButton Ability = new JButton("Utilisation des compétences");
+        Ability.setActionCommand("ability");
+        Ability.addActionListener(this);
+
         add(exploration);
+        add(pickPiece);
         add(fintour);
+        add(Ability);
+
 
     }
     @Override
@@ -1406,6 +1520,13 @@ class DControleur {
         player p = this.modele.players.get(currentPlayer);
         p.remove_sand(this.modele.cases[x][y]);
     }
+    public void useTool(Equipement tool,String x,String y){
+        player p = this.modele.players.get(currentPlayer);
+        if(Integer.parseInt(x)>=0 && Integer.parseInt(x)<=4
+            &&  Integer.parseInt(y)>=0 && Integer.parseInt(y)<=4){
+                p.use_tool(tool, modele.cases[Integer.parseInt(x)][Integer.parseInt(x)]);
+        }
+    }
 
     public void performAction(String action) {
         // Perform the action based on the given action command
@@ -1428,6 +1549,7 @@ class DControleur {
                 break;
             case "exploration":
                 p.releveP();
+                p.tire_tool();
                 break;
 
             default:
